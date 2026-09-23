@@ -1,0 +1,156 @@
+<!doctype html>
+<!-- verification/r2/covers.html — authored cover-art source (furoshiki edition).
+  Each game is a gift wrapped in its own cloth: rotated silk square with fold
+  panels and weave, a gold maemusubi knot (the collection signature), the
+  game's emblem drawn on the cloth, and a corner-fold reveal. Rendered to PNG
+  at each cover's exact shipped dimensions by drive-covers.mjs.
+  This file IS the source of arcade/covers/*.png for the zai 5.3max edition. -->
+<meta charset="utf-8">
+<body>
+<script>
+const GAMES = {
+  'boxhead':                   { w: 1204, h: 752,  hue: '#6f7d4e', title: 'BOXHEAD', sub: '2PLAY ROOMS · SURVIVAL' },
+  'impossible':                { w: 1280, h: 720,  hue: '#c8b48c', title: 'THE IMPOSSIBLE GAME', sub: 'ONE BUTTON · NO EXCUSES' },
+  'burger-tycoon':             { w: 588,  h: 270,  hue: '#a4552f', title: 'BURGER TYCOON', sub: 'GROWTH AT ANY COST' },
+  'chicken-invaders':          { w: 1280, h: 720,  hue: '#24355b', title: 'CHICKEN INVADERS', sub: 'THE NEXT WAVE' },
+  'chicken-invaders-original': { w: 1280, h: 720,  hue: '#4a4a6e', title: 'CLUCK HORIZON', sub: 'AN ORIGINAL CAMPAIGN' },
+  'swords-and-sandals':        { w: 1000, h: 543,  hue: '#9b674b', title: 'SWORDS & SANDALS', sub: "EMPEROR'S REIGN" },
+  'hardest':                   { w: 960,  h: 577,  hue: '#827fa2', title: "THE WORLD'S HARDEST GAME", sub: '114 LEVELS · NO MERCY' },
+};
+const GOLD = '#e6b847', GOLD_D = '#a97f1e', CREAM = '#efe7d2', CHAR = '#14181a';
+
+function shade(hex, f) { // f>0 lighten toward cream, f<0 darken
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  const t = f > 0 ? [239, 231, 210] : [10, 12, 14], k = Math.abs(f);
+  const mix = (c, i) => Math.round(c + (t[i] - c) * k);
+  return `rgb(${mix(r,0)},${mix(g,1)},${mix(b,2)})`;
+}
+
+function drawCover(slug) {
+  const g = GAMES[slug], W = g.w, H = g.h;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const S = Math.min(W, H); // scale unit
+
+  // ground: charcoal with vignette
+  x.fillStyle = CHAR; x.fillRect(0, 0, W, H);
+  const vg = x.createRadialGradient(W/2, H/2, S*0.2, W/2, H/2, Math.max(W, H)*0.75);
+  vg.addColorStop(0, 'rgba(255,244,214,0.05)'); vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+  x.fillStyle = vg; x.fillRect(0, 0, W, H);
+
+  // the furoshiki cloth: rotated square, four fold panels, weave, stitched hem
+  const cx = W / 2, cy = H * 0.52, r = S * 0.40;
+  x.save(); x.translate(cx, cy); x.rotate(Math.PI / 4);
+  const panels = [[-r, -r, 0.10], [0, -r, -0.06], [-r, 0, -0.12], [0, 0, 0.16]];
+  for (const [px, py, l] of panels) {
+    x.fillStyle = shade(g.hue, l);
+    x.fillRect(px, py, r, r);
+  }
+  // weave: fine diagonal threads
+  x.globalAlpha = 0.10; x.strokeStyle = CREAM; x.lineWidth = Math.max(1, S * 0.0016);
+  for (let i = -2 * r; i < 2 * r; i += S * 0.024) {
+    x.beginPath(); x.moveTo(i, -2 * r); x.lineTo(i + 2 * r, 2 * r); x.stroke();
+    x.beginPath(); x.moveTo(i + 2 * r, -2 * r); x.lineTo(i, 2 * r); x.stroke();
+  }
+  x.globalAlpha = 1;
+  // hem stitch
+  x.strokeStyle = shade(g.hue, -0.35); x.lineWidth = Math.max(2, S * 0.006);
+  x.strokeRect(-r * 0.97, -r * 0.97, r * 1.94, r * 1.94);
+  x.strokeStyle = shade(g.hue, 0.32); x.lineWidth = Math.max(1, S * 0.002);
+  x.setLineDash([S * 0.012, S * 0.012]);
+  x.strokeRect(-r * 0.93, -r * 0.93, r * 1.86, r * 1.86);
+  x.setLineDash([]);
+  x.restore();
+
+  // gold maemusubi knot at the cloth's top corner (collection signature)
+  const kx = cx, ky = cy - r * Math.cos(Math.PI / 4) - S * 0.015;
+  x.save(); x.translate(kx, ky);
+  x.lineJoin = x.lineCap = 'round';
+  const bw = S * 0.052; // knot scale
+  // tails flowing down the cloth
+  x.strokeStyle = GOLD_D; x.lineWidth = bw * 0.42;
+  x.beginPath(); x.moveTo(-bw * 0.5, 0); x.quadraticCurveTo(-bw * 1.7, bw * 1.1, -bw * 1.25, bw * 2.6); x.stroke();
+  x.beginPath(); x.moveTo(bw * 0.5, 0); x.quadraticCurveTo(bw * 1.7, bw * 1.1, bw * 1.25, bw * 2.6); x.stroke();
+  // loops
+  x.fillStyle = GOLD;
+  x.save(); x.rotate(-0.55); x.beginPath(); x.ellipse(-bw * 0.95, 0, bw * 0.78, bw * 0.42, 0, 0, 7); x.fill(); x.restore();
+  x.save(); x.rotate(0.55); x.beginPath(); x.ellipse(bw * 0.95, 0, bw * 0.78, bw * 0.42, 0, 0, 7); x.fill(); x.restore();
+  // knot band
+  x.fillStyle = GOLD; x.strokeStyle = GOLD_D; x.lineWidth = bw * 0.10;
+  x.beginPath(); x.roundRect(-bw * 0.5, -bw * 0.42, bw, bw * 0.84, bw * 0.18); x.fill(); x.stroke();
+  x.restore();
+
+  // game emblem, cream line art on the cloth
+  x.strokeStyle = CREAM; x.fillStyle = CREAM;
+  x.lineWidth = Math.max(2.5, S * 0.009); x.lineJoin = x.lineCap = 'round';
+  const ey = cy + S * 0.035, e = S * 0.017; // emblem unit
+  x.save(); x.translate(cx, ey);
+  if (slug === 'boxhead') {
+    x.beginPath(); x.roundRect(-2.2 * e, -2.2 * e, 4.4 * e, 4.4 * e, e * 0.5); x.stroke();
+    x.beginPath(); x.arc(-e, -e * 0.4, e * 0.34, 0, 7); x.arc(e, -e * 0.4, e * 0.34, 0, 7); x.fill();
+    for (const [ox, oy] of [[-3.6, 2.6], [3.6, 2.6], [0, 3.5]]) { x.beginPath(); x.arc(ox * e, oy * e, e * 0.5, 0, 7); x.fill(); }
+  } else if (slug === 'impossible') {
+    x.beginPath(); x.roundRect(-e * 1.6, -2.4 * e, 3.2 * e, 3.2 * e, e * 0.3); x.stroke();
+    x.beginPath(); x.moveTo(-3.8 * e, 1.6 * e); x.lineTo(-2.9 * e, 0.4 * e); x.lineTo(-2 * e, 1.6 * e);
+    x.moveTo(2 * e, 1.6 * e); x.lineTo(2.9 * e, 0.4 * e); x.lineTo(3.8 * e, 1.6 * e); x.stroke();
+  } else if (slug === 'burger-tycoon') {
+    let yy = -2.6 * e;
+    x.beginPath(); x.moveTo(-3 * e, yy); x.quadraticCurveTo(0, yy - 1.4 * e, 3 * e, yy); x.stroke(); yy += 1.5 * e;
+    x.beginPath(); x.moveTo(-3.4 * e, yy); x.lineTo(3.4 * e, yy); x.stroke(); yy += 1.2 * e;
+    x.beginPath(); x.moveTo(-3 * e, yy); x.lineTo(3 * e, yy); x.stroke(); yy += 1.2 * e;
+    x.beginPath(); x.moveTo(-3.4 * e, yy); x.lineTo(3.4 * e, yy); x.stroke(); yy += 1.3 * e;
+    x.beginPath(); x.moveTo(-2.8 * e, yy); x.quadraticCurveTo(0, yy + 1.2 * e, 2.8 * e, yy); x.stroke();
+  } else if (slug === 'chicken-invaders') {
+    x.beginPath(); x.moveTo(0, -2.8 * e); x.lineTo(2 * e, 1.6 * e); x.lineTo(0, 0.9 * e); x.lineTo(-2 * e, 1.6 * e); x.closePath(); x.stroke();
+    for (const ox of [-2.6, 0, 2.6]) { x.beginPath(); x.ellipse(ox * e, 2.9 * e, e * 0.55, e * 0.75, 0, 0, 7); x.stroke(); }
+  } else if (slug === 'chicken-invaders-original') {
+    x.beginPath(); x.moveTo(-3.4 * e, 1.8 * e); x.lineTo(3.4 * e, 1.8 * e); x.stroke();
+    x.beginPath(); x.moveTo(0, -2.9 * e); x.lineTo(1.8 * e, 1.2 * e); x.lineTo(0, 0.6 * e); x.lineTo(-1.8 * e, 1.2 * e); x.closePath(); x.stroke();
+    for (const [ox, oy, s] of [[-2.4, -1.8, 0.5], [2.8, -2.4, 0.7], [-3.4, 0.4, 0.4]]) {
+      x.beginPath(); x.arc(ox * e, oy * e, e * s * 0.7, 0, 7); x.fill();
+    }
+  } else if (slug === 'swords-and-sandals') {
+    x.save(); x.rotate(-0.6); x.beginPath(); x.moveTo(-2.6 * e, 2.6 * e); x.lineTo(2.4 * e, -2.4 * e); x.stroke();
+    x.beginPath(); x.moveTo(1.4 * e, -2.4 * e); x.lineTo(2.4 * e, -1.4 * e); x.stroke(); x.restore();
+    x.save(); x.rotate(0.6); x.beginPath(); x.moveTo(2.6 * e, 2.6 * e); x.lineTo(-2.4 * e, -2.4 * e); x.stroke();
+    x.beginPath(); x.moveTo(-1.4 * e, -2.4 * e); x.lineTo(-2.4 * e, -1.4 * e); x.stroke(); x.restore();
+    x.beginPath(); x.arc(0, 2.2 * e, 3.1 * e, Math.PI * 1.15, Math.PI * 1.85); x.stroke();
+  } else if (slug === 'hardest') {
+    x.fillStyle = '#d21f26'; x.beginPath(); x.roundRect(-2 * e, -2 * e, 4 * e, 4 * e, e * 0.25); x.fill();
+    x.fillStyle = '#1f4fd2';
+    for (const oy of [-3.4, 3.4]) { x.beginPath(); x.arc(-2.4 * e, oy * e, e * 0.6, 0, 7); x.fill(); x.beginPath(); x.arc(2.4 * e, oy * e, e * 0.6, 0, 7); x.fill(); }
+    x.strokeStyle = CREAM; x.lineWidth = Math.max(1.5, S * 0.005);
+    x.beginPath(); x.moveTo(-2.4 * e, -3.4 * e); x.lineTo(-2.4 * e, 3.4 * e); x.moveTo(2.4 * e, -3.4 * e); x.lineTo(2.4 * e, 3.4 * e); x.stroke();
+  }
+  x.restore();
+
+  // title + genre on the cloth's lower half
+  const tSize = Math.max(15, S * (slug === 'burger-tycoon' ? 0.085 : 0.058));
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = `700 ${tSize}px monospace`;
+  x.fillStyle = CREAM;
+  x.shadowColor = 'rgba(0,0,0,0.45)'; x.shadowBlur = S * 0.012;
+  x.fillText(g.title, cx, cy + S * 0.185);
+  x.shadowBlur = 0;
+  x.font = `${Math.max(10, tSize * 0.42)}px monospace`;
+  x.fillStyle = shade(g.hue, 0.55);
+  x.fillText(g.sub, cx, cy + S * 0.185 + tSize * 0.95);
+
+  // corner fold reveal (bottom-right): the gift underneath
+  const fw = S * 0.11;
+  x.beginPath(); x.moveTo(W - fw, H); x.lineTo(W, H - fw); x.lineTo(W, H); x.closePath();
+  x.fillStyle = GOLD; x.fill();
+  x.beginPath(); x.moveTo(W - fw, H); x.lineTo(W - fw * 0.72, H - fw * 0.72); x.lineTo(W - fw * 0.72, H); x.closePath();
+  x.fillStyle = GOLD_D; x.fill();
+
+  // edition signature strip
+  x.font = `${Math.max(9, S * 0.018)}px monospace`;
+  x.fillStyle = 'rgba(230,184,71,0.85)';
+  x.textAlign = 'left';
+  x.fillText('ZAI 5.3MAX-ZCODE-VANILLA · EDITION 02 · FUROSHIKI COVER SET', S * 0.035, H - S * 0.035);
+  return cv.toDataURL('image/png');
+}
+window.__cover = (slug) => drawCover(slug);
+window.__slugs = () => Object.keys(GAMES);
+</script>
