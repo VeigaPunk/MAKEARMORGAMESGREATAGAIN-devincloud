@@ -18,7 +18,7 @@ const PLAYER = 20;             // player square edge (px)
 const PLAYER_SPEED = 175;      // px/s default; level may override
 const DOT_R = 6;               // default patrol dot radius (px)
 const COIN_R = 6;
-const DEAD_TIME = 0.25;        // s from death to respawn (≤200ms feel @60fps)
+const DEAD_TIME = 0.15;        // s from death to respawn (≤200ms feel @60fps)
 const EPS = 0.001;
 
 const TILE_CHARS = new Set(['#', '.', 'S', 'G', 'K', 'C', 'c', 'y', 'D', 'T']);

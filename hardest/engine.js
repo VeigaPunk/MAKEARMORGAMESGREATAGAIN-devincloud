@@ -18,7 +18,7 @@ const PLAYER = 20;             // player square edge (px)
 const PLAYER_SPEED = 175;      // px/s default; level may override
 const DOT_R = 6;               // default patrol dot radius (px)
 const COIN_R = 6;
-const DEAD_TIME = 0.25;        // s from death to respawn (15 frames at 60Hz)
+const DEAD_TIME = 0.15;        // s from death to respawn (≤200ms feel @60fps)
 const EPS = 0.001;
 
 const TILE_CHARS = new Set(['#', '.', 'S', 'G', 'K', 'C', 'c', 'y', 'D', 'T']);
@@ -27,9 +27,9 @@ const ZONE_CHARS = new Set(['S', 'G', 'K']);
 /* ---------- level parsing ---------- */
 
 function parseLevel(level) {
-  if (!level || typeof level !== 'object') throw new Error('level: not an object');
   if (level.playerSpeed !== undefined && (!Number.isFinite(level.playerSpeed) || level.playerSpeed <= 0 || level.playerSpeed > 1000))
     throw new Error('level.playerSpeed: must be greater than 0 and at most 1000 px/s');
+  if (!level || typeof level !== 'object') throw new Error('level: not an object');
   const rows = level.map;
   if (!Array.isArray(rows) || rows.length === 0) throw new Error('level.map: empty');
   const h = rows.length, w = rows[0].length;
