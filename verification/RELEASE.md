@@ -23,6 +23,12 @@ level proofs, STATIC AUDIT PASS, zero console errors on all seven pages,
 zero non-local network requests, and per-game live input passes recorded in
 `../ship-records/`.
 
+Published 2026-09-23 at the operator's explicit instruction as MAGGA
+Edition 02 — **https://ds4cc.com/magga/zai-5.3max-zcode-vanilla/**
+(via the `ds4cc-marketplace` repository, commit `ec6e9cc`). Deployed
+artifact verified live: all routes 200 and the deployed Impossible game
+boots in a real browser.
+
 ## Release 1.0 — 2026-09-22 (historical, commit 4f5cc41, reverted by 4d100bb)
 
 The first complete ship: six Vite/TS apps + hardest + a Clashbound copy

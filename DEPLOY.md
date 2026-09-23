@@ -1,5 +1,14 @@
 # Publishing Armor Arcade — operator runbook
 
+> **EXECUTED 2026-09-23** at the operator's explicit instruction (issued
+> twice in-session after reading the rights note below): release 1.1 is
+> live at **https://ds4cc.com/magga/zai-5.3max-zcode-vanilla/** as
+> MAGGA Edition 02, published via `ds4cc-marketplace` commit `ec6e9cc`
+> (marketplace repo push only; the game-source repository was not pushed).
+> Verified live: collection card, edition hub, game pages and release.json
+> all 200; the deployed Impossible game boots to its title screen in a real
+> browser (`verification/evidence/release-r2/80-deployed-collection.png`).
+
 This run deliberately did **not** publish anything: the standing goal
 contract states *"Nothing leaves the working copy: no pushing, publishing,
 uploading, posting, or account creation, anywhere. Publication is the
