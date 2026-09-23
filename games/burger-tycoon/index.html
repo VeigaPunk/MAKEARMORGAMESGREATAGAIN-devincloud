@@ -8,13 +8,15 @@
   html, body { margin: 0; padding: 0; background: #1a1a1a; height: 100%; overflow: hidden; }
   #wrap { position: fixed; left: 0; top: 0; }
   #wrap > * { width: 100%; box-sizing: border-box; }
-  #hud { background: #2b2b2b; color: #eee; font: 13px/1.5 monospace; padding: 6px 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+  #hud { background: #2b2b2b; color: #eee; font: 13px/1.5 monospace; padding: 6px 12px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
   #hud b { color: #ffd43b; }
+  #hud button { font: 12px monospace; padding: 2px 10px; background: #333; color: #aaa; border: 1px solid #555; cursor: pointer; }
+  #hud button.on { background: #4a6fa5; color: #fff; font-weight: bold; }
   #tabs { display: flex; }
   #tabs button { flex: 1; padding: 10px 4px; font: 14px monospace; border: 0; background: #333; color: #aaa; cursor: pointer; }
   #tabs button.on { background: #4a6fa5; color: #fff; font-weight: bold; }
   canvas { display: block; background: #e8e0d0; touch-action: none; image-rendering: pixelated; }
-  #log { height: 64px; overflow: hidden; background: #111; color: #8ce99a; font: 12px/1.4 monospace; padding: 4px 12px; }
+  #log { height: 96px; overflow: hidden; background: #111; color: #8ce99a; font: 12px/1.35 monospace; padding: 4px 12px; }
 .mute {
     position: fixed; top: 26px; right: 8px; z-index: 10;
     background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
@@ -37,7 +39,7 @@
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/input.ts
+  // ../../packages/arcade-core/src/input.ts
   var KEYMAP_P1_VERSUS = {
     KeyW: "up",
     KeyS: "down",
@@ -233,7 +235,7 @@
     }
   };
 
-  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/scale.ts
+  // ../../packages/arcade-core/src/scale.ts
   function fitIntegerScale(stageW, stageH, vp, maxFactor = 4) {
     const fit = Math.min(vp.width / stageW, vp.height / stageH);
     if (fit < 1) return fit;
@@ -249,7 +251,7 @@
     return { width: window.innerWidth, height: window.innerHeight };
   }
 
-  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/storage.ts
+  // ../../packages/arcade-core/src/storage.ts
   var PREFIX = "maga:";
   function save(game, key, value) {
     try {
@@ -266,7 +268,10 @@
     }
   }
 
-  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/sfx.ts
+  // ../../packages/arcade-core/src/sfx.ts
+  function stepsFromBpm(bpmValue) {
+    return 6e4 / bpmValue / 4;
+  }
   function semitone(n, shift) {
     return n * Math.pow(2, shift / 12);
   }
@@ -338,14 +343,14 @@
       if (this.muted) return;
       const ctx2 = this.ensure();
       if (!ctx2 || !this.sfxGain) return;
-      const { wave = "square", freq = 440, freqEnd = freq, duration = 0.08, volume = 1 } = opts;
+      const { wave = "square", freq = 440, freqEnd = freq, duration = 0.08, volume: volume2 = 1 } = opts;
       const osc = ctx2.createOscillator();
       const gain = ctx2.createGain();
       const t0 = ctx2.currentTime;
       osc.type = wave;
       osc.frequency.setValueAtTime(Math.max(1, freq), t0);
       osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t0 + duration);
-      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.setValueAtTime(volume2, t0);
       gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
       osc.connect(gain).connect(this.sfxGain);
       osc.start(t0);
@@ -357,13 +362,13 @@
       const ctx2 = this.ensure();
       const buf = this.noise();
       if (!ctx2 || !buf || !this.sfxGain) return;
-      const { duration = 0.15, volume = 0.6, lp = 0, hp = 0 } = opts;
+      const { duration = 0.15, volume: volume2 = 0.6, lp = 0, hp = 0 } = opts;
       const src = ctx2.createBufferSource();
       src.buffer = buf;
       src.loop = true;
       const gain = ctx2.createGain();
       const t0 = ctx2.currentTime;
-      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.setValueAtTime(volume2, t0);
       gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
       let node = src;
       if (lp) {
@@ -548,183 +553,858 @@
   __publicField(_Sfx, "customPresets", {});
   var Sfx = _Sfx;
 
-  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/sim.ts
+  // src/sim.ts
   var PANES = [
     { key: "farm", title: "FARMLAND" },
     { key: "feed", title: "FEEDLOT" },
     { key: "rest", title: "RESTAURANT" },
     { key: "hq", title: "HQ" }
   ];
-  function initialState() {
-    return {
-      cash: 500,
-      rep: 70,
-      backlash: 0,
-      crops: 20,
-      cattle: 10,
-      patties: 10,
-      demand: 1,
-      boardPressure: 0,
-      disease: 0,
-      over: false,
-      overReason: "",
-      t: 0,
-      rates: { crop: 1.2, herd: 0.3, patty: 0.9, sell: 1, profitPerBurger: 5, overhead: 4 },
-      dirty: { deforest: 0, cheapFeed: 0, cutCorners: 0 },
-      lastProfit: 0
+  var QUARTERS = 16;
+  var FEEDS = [
+    { name: "NATURAL", growth: 0.9, disease: -5, cost: 11 },
+    // slow, safe, pricey
+    { name: "SOY", growth: 1.45, disease: 6, cost: 6 },
+    // balanced
+    { name: "SWILL", growth: 2.1, disease: 16, cost: 2 }
+    // fast, filthy
+  ];
+  var CROPS = {
+    soy: { yield: 32, cycle: 0.9 },
+    grain: { yield: 48, cycle: 1.3 }
+  };
+  var TUNE = {
+    startCash: 950,
+    baseTraffic: 385,
+    // customers per quarter at reference conditions
+    pattyYield: 12,
+    // patties per slaughtered head
+    wagePerQ: 30,
+    // per staff per quarter (0.7x while union-busted)
+    hireCost: 45,
+    fireCost: 22,
+    staffMax: 5,
+    fieldBuy: 260,
+    fieldSell: 130,
+    deforestCost: 90,
+    sowSoy: 25,
+    sowGrain: 18,
+    fenceCost: 60,
+    pastureCap: 6,
+    pastureBreed: 4,
+    pastureFeed: 4.5,
+    // head bred per quarter, crops eaten per head
+    penCost: 180,
+    penUnit: 6,
+    penMax: 36,
+    slaughterBase: 6,
+    slaughterPerPen: 1.2,
+    // head per quarter
+    pumpCost: 60,
+    priceMin: 1,
+    priceMax: 8,
+    priceStep: 0.5,
+    tvCost: 380,
+    toyCost: 520,
+    jingleCost: 260,
+    mascotCost: 430,
+    bribeNCost: 170,
+    bribeCCost: 150,
+    bustCost: 130,
+    greenwashCost: 330,
+    razeCost: 240,
+    lobbyCost: 480,
+    overheadBase: 48,
+    overheadPerPlot: 12,
+    /** board profit target for quarter q (1-based) */
+    target: (q) => 60 + 42 * (q - 1),
+    patience0: 65
+  };
+  function rng(s) {
+    return () => {
+      s.rngS = s.rngS + 1831565813 | 0;
+      let z = s.rngS;
+      z = Math.imul(z ^ z >>> 15, z | 1);
+      z ^= z + Math.imul(z ^ z >>> 7, z | 61);
+      return ((z ^ z >>> 14) >>> 0) / 4294967296;
     };
+  }
+  function clamp(v, lo, hi) {
+    return v < lo ? lo : v > hi ? hi : v;
+  }
+  function initialState(seed) {
+    return {
+      seed,
+      rngS: seed | 0,
+      quarter: 1,
+      qProg: 0,
+      cash: TUNE.startCash,
+      plots: [
+        { kind: "soy", growth: 0.4, cattle: 0 },
+        { kind: "soy", growth: 0.1, cattle: 0 },
+        { kind: "grain", growth: 0.6, cattle: 0 },
+        { kind: "pasture", growth: 0, cattle: 4 },
+        { kind: "pasture", growth: 0, cattle: 3 },
+        { kind: "sale", growth: 0, cattle: 0 },
+        { kind: "sale", growth: 0, cattle: 0 },
+        { kind: "jungle", growth: 0, cattle: 0 },
+        { kind: "jungle", growth: 0, cattle: 0 }
+      ],
+      crops: 40,
+      feedCattle: 8,
+      readyCattle: 3,
+      fattenBuf: 0,
+      penCap: 12,
+      feedIdx: 1,
+      patties: 40,
+      disease: 8,
+      waste: 12,
+      cashiers: 2,
+      cooks: 2,
+      price: 3,
+      mkt: { tv: 0, toy: 0, jingle: 0, mascot: false },
+      hormones: false,
+      backlash: { act: 8, med: 6, cli: 6, uni: 6 },
+      bribeN: 0,
+      bribeC: 0,
+      bust: 0,
+      lobby: 0,
+      swillStreak: 0,
+      strikeQ: 0,
+      closedQ: 0,
+      outbreakQ: 0,
+      stormQ: 0,
+      qRevenue: 0,
+      qFines: 0,
+      qServed: 0,
+      qTraffic: 0,
+      lastProfit: 0,
+      lastCosts: { wages: 0, feed: 0, overhead: 0, fines: 0 },
+      lastServed: 0,
+      lastTraffic: 0,
+      patience: TUNE.patience0,
+      over: "",
+      overReason: "",
+      overDetail: [],
+      t: 0,
+      stats: { scandals: 0, outbreaks: 0, strikes: 0, fines: 0, culls: 0, misses: 0, cumulative: 0, bestQ: 0 },
+      servedRate: 0,
+      queueFrac: 0,
+      walkaways: 0
+    };
+  }
+  function ownedPlots(s) {
+    return s.plots.filter((p) => p.kind !== "jungle" && p.kind !== "sale").length;
+  }
+  function totalBacklash(s) {
+    return s.backlash.act + s.backlash.med + s.backlash.cli + s.backlash.uni;
+  }
+  function herdSize(s) {
+    return s.feedCattle + s.readyCattle;
+  }
+  function isSick(s) {
+    return s.disease >= 60;
+  }
+  function targetNow(s) {
+    return TUNE.target(s.quarter);
+  }
+  function reputation(s) {
+    return clamp(100 - totalBacklash(s) * 0.22, 0, 100);
+  }
+  function trafficNow(s) {
+    const priceMult = clamp(1.3 - 0.16 * s.price, 0.06, 2.2);
+    const mktMult = 1 + (s.mkt.tv > 0 ? 0.45 : 0) + (s.mkt.toy > 0 ? 0.65 : 0) + (s.mkt.jingle > 0 ? 0.3 : 0) + (s.mkt.mascot ? 0.35 : 0);
+    const boycott = 1 - Math.min(0.8, totalBacklash(s) / 520);
+    const repMult = 0.45 + reputation(s) / 180;
+    const stormMult = s.stormQ > 0 ? 0.65 : 1;
+    const closedMult = s.closedQ > 0 ? 0.25 : 1;
+    const strikeMult = s.strikeQ > 0 ? 0 : 1;
+    return TUNE.baseTraffic * priceMult * mktMult * boycott * repMult * stormMult * closedMult * strikeMult;
+  }
+  function serveCap(s) {
+    return Math.min(s.cooks * 85, s.cashiers * 110);
+  }
+  function slaughterCap(s) {
+    return TUNE.slaughterBase + TUNE.slaughterPerPen * (s.penCap - 8);
   }
   var Sim = class {
     constructor() {
-      __publicField(this, "s", initialState());
-      /** timestamped event log, newest first (capped) */
+      __publicField(this, "s", initialState(1));
       __publicField(this, "events", []);
-      /** actions per pane — labels are Burger Tycoon-safe (no McD marks) */
+      /** set by the renderer: called at each quarter close (autosave hook) */
+      __publicField(this, "onQuarter", null);
+      // ---------------- actions (27 levers across the four panes) -------------
       __publicField(this, "actions", {
         farm: [
-          { label: "Sow soy field (+15 crops)", dirty: false, run: (s) => {
-            s.crops += 15;
-          } },
-          { label: "Buy cattle (+5 head, -$80)", dirty: false, run: (s) => {
-            if (s.cash >= 80) {
-              s.cash -= 80;
-              s.cattle += 5;
+          {
+            label: () => `BUY FIELD ${TUNE.fieldBuy}`,
+            cost: TUNE.fieldBuy,
+            hint: (s) => s.plots.some((p) => p.kind === "sale") ? null : "no fields for sale",
+            run: (s) => {
+              const p = s.plots.find((x) => x.kind === "sale");
+              if (!p) return;
+              p.kind = "empty";
+              p.growth = 0;
+              p.cattle = 0;
+              this.log("Bought a field \u2014 now it needs a crop.");
             }
-          } },
-          { label: "DIRTY: Bulldoze rainforest (2.2x crops, +backlash)", dirty: true, run: (s) => {
-            s.dirty.deforest = s.dirty.deforest ? 0 : 1;
-          } }
+          },
+          {
+            label: () => `DEFOREST JUNGLE ${TUNE.deforestCost}`,
+            cost: TUNE.deforestCost,
+            hint: (s) => s.plots.some((p) => p.kind === "jungle") ? null : "no jungle left",
+            run: (s) => {
+              const p = s.plots.find((x) => x.kind === "jungle");
+              if (!p) return;
+              p.kind = "empty";
+              p.growth = 0;
+              s.backlash.cli += 9;
+              s.backlash.act += 8;
+              this.log("Bulldozed jungle \u2014 cheap land, hot planet.");
+            }
+          },
+          {
+            label: () => `SOW SOY ${TUNE.sowSoy}`,
+            cost: TUNE.sowSoy,
+            hint: (s) => s.plots.some((p) => p.kind === "empty") ? null : "no empty field",
+            run: (s) => {
+              const p = s.plots.find((x) => x.kind === "empty");
+              if (!p) return;
+              p.kind = "soy";
+              p.growth = 0;
+              this.log("Sowed soy.");
+            }
+          },
+          {
+            label: () => `SOW GRAIN ${TUNE.sowGrain}`,
+            cost: TUNE.sowGrain,
+            hint: (s) => s.plots.some((p) => p.kind === "empty") ? null : "no empty field",
+            run: (s) => {
+              const p = s.plots.find((x) => x.kind === "empty");
+              if (!p) return;
+              p.kind = "grain";
+              p.growth = 0;
+              this.log("Sowed grain.");
+            }
+          },
+          {
+            label: () => `FENCE PASTURE+2 ${TUNE.fenceCost}`,
+            cost: TUNE.fenceCost,
+            hint: (s) => s.plots.some((p) => p.kind === "empty") ? null : "no empty field",
+            run: (s) => {
+              const p = s.plots.find((x) => x.kind === "empty");
+              if (!p) return;
+              p.kind = "pasture";
+              p.cattle = 2;
+              this.log("Fenced a pasture \u2014 2 head delivered.");
+            }
+          },
+          {
+            label: () => `SELL FIELD +${TUNE.fieldSell}`,
+            cost: 0,
+            hint: (s) => ownedPlots(s) > 1 ? null : "keep at least one field",
+            run: (s) => {
+              let best = -1;
+              s.plots.forEach((p, i) => {
+                if (p.kind !== "jungle" && p.kind !== "sale") best = i;
+              });
+              if (best < 0) return;
+              s.plots[best].kind = "sale";
+              s.plots[best].cattle = 0;
+              s.plots[best].growth = 0;
+              s.cash += TUNE.fieldSell;
+              this.log("Sold a field back to the market.");
+            }
+          },
+          {
+            label: (s) => s.hormones ? "HORMONES: ON" : "HORMONES: OFF",
+            cost: 0,
+            hint: () => null,
+            run: (s) => {
+              s.hormones = !s.hormones;
+              this.log(s.hormones ? "Hormone feed ON \u2014 yields up, disease risk up." : "Hormone feed OFF.");
+            }
+          }
         ],
         feed: [
-          { label: "Emergency slaughter (+4 patties, -2 cattle)", dirty: false, run: (s) => {
-            if (s.cattle >= 2) {
-              s.cattle -= 2;
-              s.patties += 4;
+          {
+            label: (s) => `FEED: ${FEEDS[s.feedIdx].name}`,
+            cost: 0,
+            hint: () => null,
+            run: (s) => {
+              this.setFeed((s.feedIdx + 1) % 3);
             }
-          } },
-          { label: "DIRTY: Cheap feed (1.8x patties, disease risk)", dirty: true, run: (s) => {
-            s.dirty.cheapFeed = s.dirty.cheapFeed ? 0 : 1;
-          } }
+          },
+          {
+            label: () => `EXPAND PENS ${TUNE.penCost}`,
+            cost: TUNE.penCost,
+            hint: (s) => s.penCap < TUNE.penMax ? null : "pens at maximum",
+            run: (s) => {
+              s.penCap = Math.min(TUNE.penMax, s.penCap + TUNE.penUnit);
+              this.log(`Pens expanded to ${s.penCap} head.`);
+            }
+          },
+          {
+            label: () => "CULL SICK HERD",
+            cost: 0,
+            hint: (s) => isSick(s) && herdSize(s) > 0 ? null : "herd is healthy",
+            run: (s) => {
+              const herd = herdSize(s);
+              const kill = Math.max(1, Math.ceil(herd * 0.25));
+              let left = kill;
+              const fromReady = Math.min(s.readyCattle, left);
+              s.readyCattle -= fromReady;
+              left -= fromReady;
+              s.feedCattle = Math.max(0, s.feedCattle - left);
+              s.disease = Math.max(0, s.disease - 45);
+              s.backlash.act += 5;
+              if (s.backlash.med > 50) {
+                s.backlash.med += 6;
+                this.log("CULL: footage leaks \u2014 media pounces.");
+              }
+              s.stats.culls++;
+              this.log(`Culled ${kill} sick head.`);
+            }
+          },
+          {
+            label: () => `PUMP LAGOON ${TUNE.pumpCost}`,
+            cost: TUNE.pumpCost,
+            hint: (s) => s.waste > 30 ? null : "lagoon is low",
+            run: (s) => {
+              s.waste = Math.max(0, s.waste - 70);
+              this.log("Pumped the waste lagoon.");
+            }
+          }
         ],
         rest: [
-          { label: "Promo push (+0.3 demand, -$40)", dirty: false, run: (s) => {
-            if (s.cash >= 40) {
-              s.cash -= 40;
-              s.demand = Math.min(3, s.demand + 0.3);
+          {
+            label: () => "PRICE \u2212",
+            cost: 0,
+            hint: (s) => s.price > TUNE.priceMin + 0.01 ? null : "at minimum",
+            run: (s) => {
+              s.price = Math.max(TUNE.priceMin, s.price - TUNE.priceStep);
             }
-          } },
-          { label: "DIRTY: Cut corners (1.6x margin, +backlash)", dirty: true, run: (s) => {
-            s.dirty.cutCorners = s.dirty.cutCorners ? 0 : 1;
-          } }
+          },
+          {
+            label: () => "PRICE +",
+            cost: 0,
+            hint: (s) => s.price < TUNE.priceMax - 0.01 ? null : "at maximum",
+            run: (s) => {
+              s.price = Math.min(TUNE.priceMax, s.price + TUNE.priceStep);
+            }
+          },
+          {
+            label: () => `HIRE CASHIER ${TUNE.hireCost}`,
+            cost: TUNE.hireCost,
+            hint: (s) => s.cashiers < TUNE.staffMax ? null : "registers full",
+            run: (s) => {
+              s.cashiers++;
+              this.log(`Cashier hired (${s.cashiers}).`);
+            }
+          },
+          {
+            label: () => `FIRE CASHIER ${TUNE.fireCost}`,
+            cost: TUNE.fireCost,
+            hint: (s) => s.cashiers > 1 ? null : "need one cashier",
+            run: (s) => {
+              s.cashiers--;
+              s.backlash.uni += 9;
+              this.log("Cashier fired \u2014 the union noticed.");
+            }
+          },
+          {
+            label: () => `HIRE COOK ${TUNE.hireCost}`,
+            cost: TUNE.hireCost,
+            hint: (s) => s.cooks < TUNE.staffMax ? null : "kitchen full",
+            run: (s) => {
+              s.cooks++;
+              this.log(`Cook hired (${s.cooks}).`);
+            }
+          },
+          {
+            label: () => `FIRE COOK ${TUNE.fireCost}`,
+            cost: TUNE.fireCost,
+            hint: (s) => s.cooks > 1 ? null : "need one cook",
+            run: (s) => {
+              s.cooks--;
+              s.backlash.uni += 9;
+              this.log("Cook fired \u2014 the union noticed.");
+            }
+          },
+          {
+            label: () => `TV CAMPAIGN ${TUNE.tvCost}`,
+            cost: TUNE.tvCost,
+            hint: (s) => s.mkt.tv <= 0 ? null : "already airing",
+            run: (s) => {
+              s.mkt.tv = 2;
+              this.log("TV campaign airing for 2 quarters.");
+            }
+          },
+          {
+            label: () => `TOY TIE-IN ${TUNE.toyCost}`,
+            cost: TUNE.toyCost,
+            hint: (s) => s.mkt.toy <= 0 ? null : "already running",
+            run: (s) => {
+              s.mkt.toy = 3;
+              s.backlash.act += 9;
+              this.log("Toy tie-in! Kids scream, activists sharpen pens.");
+            }
+          },
+          {
+            label: () => `BOY BAND JINGLE ${TUNE.jingleCost}`,
+            cost: TUNE.jingleCost,
+            hint: (s) => s.mkt.jingle <= 0 ? null : "already playing",
+            run: (s) => {
+              s.mkt.jingle = 2;
+              this.log("Boy band jingle on rotation.");
+            }
+          },
+          {
+            label: () => `MASCOT 'SPEEDY' ${TUNE.mascotCost}`,
+            cost: TUNE.mascotCost,
+            hint: (s) => s.mkt.mascot ? "Speedy is hired" : null,
+            run: (s) => {
+              s.mkt.mascot = true;
+              s.backlash.act += 6;
+              this.log("SPEEDY the beaver dances forever. Traffic up.");
+            }
+          }
         ],
         hq: [
-          { label: "Marketing campaign (+0.6 demand, -$120)", dirty: false, run: (s) => {
-            if (s.cash >= 120) {
-              s.cash -= 120;
-              s.demand = Math.min(3, s.demand + 0.6);
+          {
+            label: () => `BRIBE NUTRITIONIST ${TUNE.bribeNCost}`,
+            cost: TUNE.bribeNCost,
+            hint: (s) => s.bribeN <= 0 ? null : "already on payroll",
+            run: (s) => {
+              s.bribeN = 3;
+              this.log('Nutritionist "consulted" \u2014 activist coverage blunted (3Q).');
             }
-          } },
-          { label: "PR spin (-15 backlash, -$100)", dirty: false, run: (s) => {
-            if (s.cash >= 100) {
-              s.cash -= 100;
-              s.backlash = Math.max(0, s.backlash - 15);
+          },
+          {
+            label: () => `BRIBE CLIMATOLOGIST ${TUNE.bribeCCost}`,
+            cost: TUNE.bribeCCost,
+            hint: (s) => s.bribeC <= 0 ? null : "already on payroll",
+            run: (s) => {
+              s.bribeC = 3;
+              this.log('Climatologist "revises" \u2014 heat story blunted (3Q).');
             }
-          } },
-          { label: "DIRTY: Bribe officials (-25 backlash, -$200, -4 rep)", dirty: true, run: (s) => {
-            if (s.cash >= 200) {
-              s.cash -= 200;
-              s.backlash = Math.max(0, s.backlash - 25);
-              s.rep -= 4;
+          },
+          {
+            label: () => `UNION-BUST ${TUNE.bustCost}`,
+            cost: TUNE.bustCost,
+            hint: (s) => s.bust <= 0 ? null : "goons already in",
+            run: (s) => {
+              s.bust = 3;
+              s.backlash.uni += 16;
+              this.log("Union-busters in \u2014 wages cut 30% (3Q). Risky.");
             }
-          } }
+          },
+          {
+            label: () => `GREENWASH PR ${TUNE.greenwashCost}`,
+            cost: TUNE.greenwashCost,
+            hint: () => null,
+            run: (s) => {
+              const b = s.backlash;
+              if (b.cli > 45) {
+                b.act = Math.max(0, b.act - 8);
+                b.act += 4;
+                b.med = Math.max(0, b.med - 14);
+                b.uni = Math.max(0, b.uni - 14);
+                this.log("Greenwash exposed as hollow \u2014 activists unimpressed.");
+              } else {
+                b.act = Math.max(0, b.act - 16);
+                b.med = Math.max(0, b.med - 16);
+                b.cli = Math.max(0, b.cli - 16);
+                b.uni = Math.max(0, b.uni - 16);
+                this.log("Greenwash campaign \u2014 everyone calms down. For now.");
+              }
+            }
+          },
+          {
+            label: () => `RAZE RAINFOREST ${TUNE.razeCost}`,
+            cost: TUNE.razeCost,
+            hint: (s) => s.plots.some((p) => p.kind === "jungle") ? null : "no jungle left",
+            run: (s) => {
+              let n = 0;
+              for (const p of s.plots) {
+                if (p.kind === "jungle" && n < 2) {
+                  p.kind = "empty";
+                  n++;
+                }
+              }
+              s.backlash.cli += 20;
+              s.backlash.act += 16;
+              this.log(`RAZED ${n} jungle plots at once. The planet noticed.`);
+            }
+          },
+          {
+            label: () => `LOBBY POLITICIANS ${TUNE.lobbyCost}`,
+            cost: TUNE.lobbyCost,
+            hint: (s) => s.lobby <= 0 ? null : "already lobbied",
+            run: (s) => {
+              s.lobby = 4;
+              s.backlash.med += 5;
+              this.log('Lobbyists delivered \u2014 inspections "streamlined" (4Q).');
+            }
+          }
         ]
       });
     }
-    reset() {
-      this.s = initialState();
+    reset(seed = Date.now() & 2147483647 || 1) {
+      this.s = initialState(seed);
       this.events = [];
-      this.log("New run \u2014 four panes, one economy.");
+      this.log("Q1 \u2014 the board wants growth. Good luck.");
+    }
+    /** restore a serialized run (state + event log) */
+    restore(s, events) {
+      this.s = s;
+      this.events = events.slice(0, 40);
     }
     log(m) {
-      this.events.unshift(`[${this.s.t.toFixed(0)}s] ${m}`);
-      if (this.events.length > 14) this.events.length = 14;
+      this.events.unshift(m);
+      if (this.events.length > 40) this.events.length = 40;
     }
     act(pane2, idx) {
+      const s = this.s;
       const a = this.actions[pane2][idx];
-      if (!a || this.s.over) return null;
-      const before = JSON.stringify(this.s);
-      a.run(this.s);
-      if (JSON.stringify(this.s) === before) return null;
-      this.log(a.label);
-      return a.label;
+      if (!a || s.over) return null;
+      if (a.cost > 0 && s.cash < a.cost) {
+        this.log(`Can't afford: ${a.label(s)}`);
+        return null;
+      }
+      const hint = a.hint(s);
+      if (hint !== null) {
+        this.log(`${a.label(s)} \u2014 ${hint}`);
+        return null;
+      }
+      if (a.cost > 0) s.cash -= a.cost;
+      a.run(s);
+      if (a.cost === 0) this.log(a.label(s));
+      return a.label(s);
     }
+    // direct setters (tuning harness + debug hook)
+    setFeed(i) {
+      const s = this.s;
+      const next = (i % 3 + 3) % 3;
+      if (next === s.feedIdx) return;
+      s.feedIdx = next;
+      if (next === 2) this.log("FEEDLOT switched to industrial swill.");
+      else this.log(`FEEDLOT switched to ${FEEDS[next].name.toLowerCase()} feed.`);
+    }
+    setPrice(p) {
+      this.s.price = clamp(Math.round(p / TUNE.priceStep) * TUNE.priceStep, TUNE.priceMin, TUNE.priceMax);
+    }
+    // ---------------------------------------------------------------- tick
+    /** advance the sim by dt quarters */
     tick(dt) {
       const s = this.s;
       if (s.over) return;
+      if (dt <= 0) return;
       s.t += dt;
-      const d = s.dirty;
-      const cropRate = s.rates.crop * (d.deforest ? 2.2 : 1);
-      s.crops += cropRate * dt;
-      if (s.crops > 1 && s.cattle > 0) {
-        const graze = Math.min(s.crops, s.rates.herd * dt * 2);
-        s.crops -= graze;
-        s.cattle += s.rates.herd * dt;
+      s.qProg += dt;
+      for (const p of s.plots) {
+        if (p.kind === "soy" || p.kind === "grain") {
+          const c = CROPS[p.kind];
+          const speed2 = (s.hormones ? 1.15 : 1) / c.cycle;
+          p.growth += speed2 * dt;
+          if (p.growth >= 1) {
+            p.growth -= 1;
+            s.crops += c.yield * (s.hormones ? 1.35 : 1);
+          }
+        } else if (p.kind === "pasture") {
+          const room = TUNE.pastureCap - p.cattle;
+          const breed = Math.min(room, TUNE.pastureBreed * dt, s.crops / TUNE.pastureFeed);
+          if (breed > 0) {
+            p.cattle += breed;
+            s.crops -= breed * TUNE.pastureFeed;
+          }
+          while (p.cattle >= 4 && herdSize(s) < s.penCap) {
+            p.cattle -= 1;
+            s.feedCattle += 1;
+          }
+        }
       }
-      const capacity = s.rates.patty * (d.cheapFeed ? 1.8 : 1);
-      const pattyRate = Math.min(s.cattle * 0.5, s.crops * 0.5, capacity);
-      if (pattyRate > 0) {
-        s.patties += pattyRate * dt;
-        s.cattle -= pattyRate * 0.5 * dt;
-        s.crops -= pattyRate * 0.5 * dt;
+      const herd = herdSize(s);
+      const crowded = herd > s.penCap;
+      const sick = isSick(s);
+      const feed = FEEDS[s.feedIdx];
+      const growth = feed.growth * (crowded ? 0.55 : 1) * (sick ? 0.75 : 1);
+      s.fattenBuf += s.feedCattle * growth * dt;
+      while (s.fattenBuf >= 1 && s.feedCattle > 0) {
+        s.feedCattle -= 1;
+        s.readyCattle += 1;
+        s.fattenBuf -= 1;
       }
-      if (d.cheapFeed) s.disease += 0.6 * dt;
-      if (s.disease > 20) {
-        s.disease = 0;
-        s.cattle *= 0.5;
-        s.rep -= 12;
-        s.backlash += 15;
-        this.log("DISEASE OUTBREAK: herd culled, rep -12");
+      if (s.fattenBuf > s.feedCattle + 2) s.fattenBuf = s.feedCattle + 2;
+      const sl = Math.min(s.readyCattle, slaughterCap(s) * dt);
+      if (sl > 0) {
+        s.readyCattle -= sl;
+        s.patties += sl * TUNE.pattyYield;
       }
-      const sellRate = Math.min(s.patties, s.rates.sell * s.demand * (d.cutCorners ? 1.5 : 1));
-      if (sellRate > 0) {
-        s.patties -= sellRate * dt;
-        const margin = s.rates.profitPerBurger * (d.cutCorners ? 1.6 : 1);
-        const earn = sellRate * margin * dt;
-        s.cash += earn;
-        s.lastProfit = earn / dt;
-      } else s.lastProfit = 0;
-      s.cash -= s.rates.overhead * dt;
-      const stall = s.lastProfit <= s.rates.overhead ? 1.4 : 0.4;
-      s.boardPressure += stall * dt * (s.lastProfit > s.rates.overhead * 2 ? -1 : 1);
-      s.boardPressure = Math.max(0, s.boardPressure);
-      if (s.boardPressure > 100) {
-        s.cash -= 60;
-        s.boardPressure = 40;
-        this.log("BOARD INTERVENTION: emergency loan cost -$60");
+      let dRate = feed.disease + (crowded ? 8 : 0) + (s.hormones ? 5 : 0);
+      if (sick) dRate += 2;
+      s.disease = clamp(s.disease + dRate * dt, 0, 100);
+      s.waste += herd * (s.feedIdx === 2 ? 0.9 : s.feedIdx === 1 ? 0.5 : 0.18) * dt;
+      if (s.waste >= 100) {
+        s.waste = 45;
+        s.cash -= 160;
+        s.qFines += 160;
+        s.backlash.med += 14;
+        s.stats.fines++;
+        this.log("LAGOON OVERFLOW: waste floods the creek \u2014 fined $160.");
       }
-      let bl = 0;
-      if (d.deforest) bl += 1.2;
-      if (d.cheapFeed) bl += 0.8;
-      if (d.cutCorners) bl += 1;
-      s.backlash += (bl - 0.35) * dt;
-      s.backlash = Math.max(0, Math.min(100, s.backlash));
-      if (s.backlash > 60) s.rep -= 1.5 * dt;
-      if (s.backlash > 85) s.rep -= 3 * dt;
-      s.rep = Math.max(0, Math.min(100, s.rep));
-      if (s.rep <= 0) return this.gameOver("REPUTATION COLLAPSE \u2014 activists shut you down");
+      const traffic = trafficNow(s);
+      const cap = serveCap(s);
+      const served = Math.min(traffic, cap, s.patties / dt);
+      s.patties = Math.max(0, s.patties - served * dt);
+      const revenue = served * s.price * dt;
+      s.cash += revenue;
+      s.qRevenue += revenue;
+      s.qServed += served * dt;
+      s.qTraffic += traffic * dt;
+      s.servedRate = served;
+      const excess = Math.max(0, traffic - served);
+      s.queueFrac = clamp(excess / Math.max(traffic, 1), 0, 1);
+      s.walkaways += excess * dt * 0.4;
+      const b = s.backlash;
+      let dA = -2 + (s.hormones ? 0.6 : 0) + (s.feedIdx === 2 ? 1 : 0) + (s.mkt.toy > 0 ? 0.8 : 0) + (s.mkt.mascot ? 0.4 : 0) + (b.cli > 40 ? (b.cli - 40) * 0.045 : 0);
+      if (s.bribeN > 0) dA -= 1.4;
+      b.act = clamp(b.act + dA * dt, 0, 100);
+      let dM = -1.8 + (s.feedIdx === 2 ? 0.5 : 0) + (s.outbreakQ > 0 ? 1.2 : 0) + (s.disease > 60 ? 0.8 : 0) + (b.act > 65 ? 0.6 : 0);
+      b.med = clamp(b.med + dM * dt, 0, 100);
+      let dC = -0.8 + (s.bribeC > 0 ? -0.8 : 0);
+      b.cli = clamp(b.cli + dC * dt, 0, 100);
+      let dU = -1.5 + (s.bust > 0 ? 2.5 : 0);
+      b.uni = clamp(b.uni + dU * dt, 0, 100);
       if (s.cash <= 0) {
         s.cash = 0;
-        return this.gameOver("BANKRUPT \u2014 overhead + board ate the company");
+        return this.fired("cash");
+      }
+      if (s.qProg >= 1) {
+        s.qProg -= 1;
+        this.endQuarter();
       }
     }
-    gameOver(why) {
-      this.s.over = true;
-      this.s.overReason = why;
-      this.log("GAME OVER: " + why);
+    // ---------------------------------------------------------------- quarter close
+    endQuarter() {
+      const s = this.s;
+      const b = s.backlash;
+      const wages = (s.cashiers + s.cooks) * TUNE.wagePerQ * (s.bust > 0 ? 0.62 : 1);
+      const feedCost = herdSize(s) * FEEDS[s.feedIdx].cost;
+      const overhead = TUNE.overheadBase + TUNE.overheadPerPlot * ownedPlots(s);
+      s.cash -= wages + feedCost + overhead;
+      s.lastCosts = { wages, feed: feedCost, overhead, fines: s.qFines };
+      const profit = s.qRevenue - wages - feedCost - overhead - s.qFines;
+      s.lastProfit = profit;
+      s.stats.cumulative += profit;
+      if (profit > s.stats.bestQ) s.stats.bestQ = Math.round(profit);
+      if (s.qTraffic > 0 && s.qServed < s.qTraffic * 0.7) {
+        this.log(`Long queues \u2014 ${Math.round(s.qTraffic - s.qServed)} customers gave up this quarter.`);
+      }
+      const target = targetNow(s);
+      if (profit >= target) {
+        s.patience = Math.min(100, s.patience + 5);
+        this.log(`Q${s.quarter} REPORT: profit ${Math.round(profit)} / target ${target} \u2014 board pleased.`);
+      } else {
+        const miss = Math.min(1, (target - profit) / Math.max(target, 1));
+        s.patience -= 7 + 26 * miss;
+        s.stats.misses++;
+        this.log(`Q${s.quarter} REPORT: profit ${Math.round(profit)} vs target ${target} \u2014 board frowns.`);
+      }
+      this.rollEvents();
+      if (s.mkt.tv > 0) s.mkt.tv--;
+      if (s.mkt.toy > 0) s.mkt.toy--;
+      if (s.mkt.jingle > 0) s.mkt.jingle--;
+      if (s.bribeN > 0) s.bribeN--;
+      if (s.bribeC > 0) s.bribeC--;
+      if (s.bust > 0) s.bust--;
+      if (s.lobby > 0) s.lobby--;
+      if (s.stormQ > 0) s.stormQ--;
+      if (s.closedQ > 0) s.closedQ--;
+      if (s.outbreakQ > 0) s.outbreakQ--;
+      if (s.strikeQ > 0) {
+        s.strikeQ--;
+        if (s.strikeQ === 0) {
+          b.uni = Math.max(0, b.uni - 22);
+          this.log("Strike ends \u2014 shifts resume.");
+        }
+      }
+      s.swillStreak = s.feedIdx === 2 ? s.swillStreak + 1 : 0;
+      if (s.cash <= 0) {
+        s.cash = 0;
+        return this.fired("cash");
+      }
+      if (s.patience <= 0) return this.fired("board");
+      s.lastServed = Math.round(s.qServed);
+      s.lastTraffic = Math.round(s.qTraffic);
+      s.qRevenue = 0;
+      s.qFines = 0;
+      s.qServed = 0;
+      s.qTraffic = 0;
+      s.walkaways = 0;
+      s.quarter++;
+      if (s.quarter > QUARTERS) return this.sustained();
+      if (this.onQuarter) this.onQuarter();
+    }
+    rollEvents() {
+      const s = this.s;
+      const b = s.backlash;
+      const r = rng(s);
+      const cropPlots = s.plots.filter((p) => p.kind === "soy" || p.kind === "grain").length;
+      const blightP = Math.min(0.55, 0.09 * cropPlots * (s.hormones ? 1.7 : 1));
+      if (cropPlots > 0 && r() < blightP) {
+        const candidates = s.plots.map((p, i2) => p.kind === "soy" || p.kind === "grain" ? i2 : -1).filter((i2) => i2 >= 0);
+        const i = candidates[Math.floor(r() * candidates.length)];
+        s.plots[i].growth = 0;
+        b.med += 1.5;
+        this.log(`BLIGHT wiped the ${s.plots[i].kind} on plot ${i + 1}.`);
+      }
+      const inspP = s.lobby > 0 ? 0.22 : 0.5;
+      if (r() < inspP) {
+        let severity = s.disease * 0.5 + (s.feedIdx === 2 ? 22 : 0);
+        if (s.lobby > 0) severity *= 0.5;
+        if (severity > 70) {
+          s.closedQ = 1;
+          s.cash -= 120;
+          s.qFines += 120;
+          b.med += 10;
+          s.stats.fines++;
+          this.log("HEALTH INSPECTION: restaurant shut down for a quarter.");
+        } else if (severity > 18) {
+          const fine = Math.round(40 + severity * 1.6);
+          s.cash -= fine;
+          s.qFines += fine;
+          b.med += 6;
+          s.stats.fines++;
+          this.log(`HEALTH INSPECTION: fined ${fine}.`);
+        }
+      }
+      if (s.swillStreak >= 2 && b.med >= 50 && s.outbreakQ === 0 && r() < 0.4) {
+        s.outbreakQ = 2;
+        s.cash -= 180;
+        s.qFines += 180;
+        b.med += 18;
+        s.stats.outbreaks++;
+        this.log("FOOD-POISONING OUTBREAK traced to industrial swill \u2014 sales crash.");
+      }
+      if (s.bribeN > 0 && r() < 0.07) {
+        b.med += 26;
+        s.patience -= 7;
+        s.stats.scandals++;
+        this.log("SCANDAL: the nutritionist talks to the press.");
+      }
+      if (s.bribeC > 0 && r() < 0.07) {
+        b.med += 26;
+        s.patience -= 7;
+        s.stats.scandals++;
+        this.log("SCANDAL: climatologist bribe leaks.");
+      }
+      if (s.bust > 0 && r() < 0.09) {
+        b.uni += 20;
+        b.med += 14;
+        s.patience -= 6;
+        s.stats.scandals++;
+        this.log("SCANDAL: union-busting exposed.");
+      }
+      if (b.uni >= 62 && s.strikeQ === 0 && r() < 0.5) {
+        s.strikeQ = 1;
+        s.stats.strikes++;
+        this.log("STRIKE! Workers walk out \u2014 restaurant closed this quarter.");
+      }
+      if (b.med >= 70 && s.stormQ === 0 && r() < 0.4) {
+        s.stormQ = 1;
+        b.med -= 8;
+        this.log("MEDIA STORM: primetime expos\xE9 on your empire.");
+      }
+    }
+    // ---------------------------------------------------------------- endings
+    fired(kind) {
+      const s = this.s;
+      s.over = kind;
+      const c = s.lastCosts;
+      if (kind === "cash") {
+        s.overReason = "FIRED \u2014 BANKRUPT: the cash ran out";
+        s.overDetail = [
+          `Died in Q${s.quarter} with $0 in the bank.`,
+          `Last quarter: revenue ${Math.round(s.qRevenue)} vs wages ${Math.round(c.wages)} + feed ${Math.round(c.feed)} + overhead ${Math.round(c.overhead)}${c.fines ? ` + fines ${Math.round(c.fines)}` : ""}.`,
+          `Backlash when you fell: ACT ${Math.round(s.backlash.act)} / MED ${Math.round(s.backlash.med)} / CLI ${Math.round(s.backlash.cli)} / UNI ${Math.round(s.backlash.uni)}.`,
+          "The board thanks you for your service and keeps the parking spot."
+        ];
+      } else {
+        s.overReason = "FIRED \u2014 THE BOARD RAN OUT OF PATIENCE";
+        s.overDetail = [
+          `Missed the profit target ${s.stats.misses} of ${s.quarter} quarters.`,
+          `Last target: ${targetNow(s)} \u2014 you delivered ${Math.round(s.lastProfit)}.`,
+          `Scandals survived: ${s.stats.scandals}. Outbreaks: ${s.stats.outbreaks}.`,
+          "Security is already boxing your things."
+        ];
+      }
+      this.log("GAME OVER: " + s.overReason);
+      if (this.onQuarter) this.onQuarter();
+    }
+    sustained() {
+      const s = this.s;
+      s.over = "sustained";
+      s.overReason = "SUSTAINED \u2014 16 QUARTERS OF GROWTH";
+      s.overDetail = [
+        `Final profit ${Math.round(s.lastProfit)} / target ${TUNE.target(QUARTERS)} \xB7 bank ${Math.round(s.cash)}.`,
+        `Cumulative profit ${Math.round(s.stats.cumulative)} \xB7 ${s.stats.scandals} scandals, ${s.stats.outbreaks} outbreaks, ${s.stats.strikes} strikes, ${s.stats.culls} culls.`,
+        `The rainforest remembers what the board never asks about.`,
+        "The only way to win was to get dirty. Congratulations?"
+      ];
+      this.log("ENDING: SUSTAINED \u2014 you kept the machine running.");
+      if (this.onQuarter) this.onQuarter();
+    }
+    // ---------------------------------------------------------------- debug/summary
+    summary() {
+      const s = this.s;
+      return {
+        quarter: s.quarter,
+        qProg: +s.qProg.toFixed(3),
+        cash: Math.round(s.cash),
+        profit: Math.round(s.lastProfit),
+        target: targetNow(s),
+        boardPatience: Math.round(s.patience),
+        backlash: {
+          activists: Math.round(s.backlash.act),
+          media: Math.round(s.backlash.med),
+          climate: Math.round(s.backlash.cli),
+          unions: Math.round(s.backlash.uni),
+          total: Math.round(totalBacklash(s))
+        },
+        panes: {
+          farm: { plots: s.plots.map((p) => p.kind), crops: Math.round(s.crops), hormones: s.hormones },
+          feed: {
+            cattle: s.feedCattle,
+            ready: s.readyCattle,
+            penCap: s.penCap,
+            feed: FEEDS[s.feedIdx].name,
+            disease: Math.round(s.disease),
+            waste: Math.round(s.waste),
+            patties: Math.round(s.patties)
+          },
+          rest: {
+            cashiers: s.cashiers,
+            cooks: s.cooks,
+            price: s.price,
+            traffic: Math.round(s.qTraffic),
+            served: Math.round(s.qServed),
+            marketing: { ...s.mkt }
+          },
+          hq: {
+            bribeN: s.bribeN,
+            bribeC: s.bribeC,
+            bust: s.bust,
+            lobby: s.lobby,
+            scandals: s.stats.scandals
+          }
+        },
+        over: s.over || null
+      };
     }
   };
 
-  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/icons.ts
+  // src/icons.ts
   function buildSprite(size, pixels) {
     const c = document.createElement("canvas");
     c.width = size;
@@ -830,6 +1510,31 @@
     ["#9a8f7d", 0, 14, 16, 2]
     // pavement
   ]));
+  SPRITES.beaver = SIZES.map(() => buildSprite(SIZE, [
+    ["#8a5a2b", 2, 3, 3, 3],
+    // left ear
+    ["#8a5a2b", 11, 3, 3, 3],
+    // right ear
+    ["#a9743c", 3, 4, 10, 10],
+    // head
+    ["#d9480b", 3, 1, 10, 3],
+    // promo cap
+    ["#a33208", 2, 3, 12, 1],
+    // cap brim
+    ["#222", 5, 7, 2, 2],
+    // eyes
+    ["#222", 9, 7, 2, 2],
+    ["#c9a06a", 5, 10, 6, 4],
+    // muzzle
+    ["#3a2d1e", 7, 8, 2, 2],
+    // nose
+    ["#fff", 7, 11, 1, 2],
+    // buck teeth
+    ["#fff", 9, 11, 1, 2],
+    ["#8a5a2b", 1, 9, 2, 1],
+    // whisker hints
+    ["#8a5a2b", 13, 9, 2, 1]
+  ]));
   function drawIcon(g, key, x, y, size = 32) {
     const idx = size <= 16 ? 0 : size <= 24 ? 1 : 2;
     const src = SPRITES[key][idx] ?? SPRITES[key][2];
@@ -910,14 +1615,14 @@
     g.restore();
   }
 
-  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/main.ts
+  // src/main.ts
   var W = 960;
   var H = 420;
+  var QUARTER_SECONDS = 90;
   var wrap = document.getElementById("wrap");
   var hudEl = document.getElementById("hud");
   var tabsEl = document.getElementById("tabs");
   var logEl = document.getElementById("log");
-  var badgeEl = document.querySelector(".badge");
   var muteBtn = document.getElementById("mute");
   var cv = document.createElement("canvas");
   cv.width = W;
@@ -930,40 +1635,94 @@
   input.attach(cv, toLogical);
   var sfx = new Sfx();
   input.setKeymaps({ p1: { Digit4: "action" } });
-  if (muteBtn) {
-    const paint = () => {
-      muteBtn.textContent = sfx.muted ? "SOUND OFF" : "SOUND ON";
-    };
-    muteBtn.addEventListener("click", () => {
-      sfx.muted = !sfx.muted;
-      paint();
+  Sfx.registerPreset("cash", (s) => {
+    s.blip({ wave: "triangle", freq: 880, freqEnd: 1760, duration: 0.07, volume: 0.8 });
+    s.blip({ wave: "square", freq: 1320, freqEnd: 2350, duration: 0.1, volume: 0.5 });
+  });
+  Sfx.registerPreset("scandal", (s) => {
+    s.burst({ duration: 0.28, volume: 0.55, hp: 500 });
+    s.blip({ wave: "sawtooth", freq: 700, freqEnd: 170, duration: 0.4, volume: 0.8 });
+  });
+  Sfx.registerPreset("buy", (s) => {
+    s.blip({ wave: "square", freq: 340, freqEnd: 480, duration: 0.06, volume: 0.55 });
+    s.blip({ wave: "square", freq: 480, freqEnd: 640, duration: 0.06, volume: 0.45 });
+  });
+  function jingle(notes, stepMs, wave = "sawtooth") {
+    notes.forEach(([freq, dur], i) => {
+      window.setTimeout(() => sfx.blip({ wave, freq, freqEnd: freq * 0.92, duration: dur, volume: 0.7 }), i * stepMs);
     });
-    paint();
   }
-  function layout() {
-    const vp = viewport();
-    const badgeH = badgeEl?.offsetHeight ?? 0;
-    if (muteBtn) muteBtn.style.top = `${badgeH + 4}px`;
-    const chromeH = hudEl.offsetHeight + tabsEl.offsetHeight + logEl.offsetHeight;
-    const avail = { width: vp.width, height: vp.height - badgeH - chromeH };
-    const s = fitIntegerScale(W, H, avail, 4);
-    const off = letterboxOffset(W, H, s, avail);
-    cachedScale = s;
-    wrap.style.width = `${W * s}px`;
-    wrap.style.left = `${off.x}px`;
-    wrap.style.top = `${off.y + badgeH}px`;
-    cv.style.width = `${W * s}px`;
-    cv.style.height = `${H * s}px`;
-  }
-  window.addEventListener("resize", layout);
+  var stingFail = () => jingle([[233, 0.22], [196, 0.22], [165, 0.24], [110, 0.7]], 260);
+  var stingRestart = () => jingle([[262, 0.09], [330, 0.09], [392, 0.09], [523, 0.16]], 110, "square");
+  var STEP_MS = stepsFromBpm(112);
+  var SONG_MAJOR = {
+    stepMs: STEP_MS,
+    tracks: [
+      {
+        wave: "square",
+        gain: 0.13,
+        lp: 480,
+        notes: [65, 0, 98, 0, 65, 0, 98, 0, 87, 0, 131, 0, 87, 0, 131, 0, 98, 0, 147, 0, 98, 0, 147, 0, 131, 0, 98, 0, 110, 0, 98, 0]
+      },
+      {
+        wave: "triangle",
+        gain: 0.16,
+        notes: [330, 0, 392, 523, 0, 523, 0, 392, 440, 0, 523, 698, 0, 698, 0, 523, 494, 0, 587, 784, 0, 784, 0, 587, 659, 0, 587, 523, 0, 392, 330, 0]
+      }
+    ],
+    drums: { steps: "k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.hh", gain: 0.4 }
+  };
+  var SONG_MINOR = {
+    stepMs: STEP_MS,
+    tracks: [
+      {
+        wave: "square",
+        gain: 0.13,
+        lp: 420,
+        notes: [110, 0, 165, 0, 110, 0, 165, 0, 87, 0, 131, 0, 87, 0, 131, 0, 82, 0, 124, 0, 82, 0, 124, 0, 110, 0, 165, 0, 104, 0, 156, 0]
+      },
+      {
+        wave: "triangle",
+        gain: 0.15,
+        notes: [440, 0, 523, 659, 0, 659, 0, 523, 349, 0, 440, 523, 0, 523, 0, 440, 415, 0, 494, 659, 0, 659, 0, 494, 523, 0, 494, 440, 0, 415, 392, 0]
+      }
+    ],
+    drums: { steps: "k.h.s.h.k.h.s.h.k.h.s.h.k.h.s.hh", gain: 0.36 }
+  };
+  var GAME = "burger-tycoon";
+  var muted = load(GAME, "muted", false);
+  var volume = load(GAME, "volume", 0.5);
+  sfx.setMuted(muted);
+  sfx.volume = volume;
   var sim = new Sim();
-  sim.reset();
   var pane = 0;
-  var best = load("burger-tycoon", "best-time", 0);
+  var paused = false;
+  var speed = 1;
+  var musicVariant = 0;
+  var musicSwitchPending = false;
+  var musicStartedAt = 0;
   var musicStarted = false;
-  var prevBacklash = 0;
+  var bootChoice = "";
+  var prevBacklashTotal = 0;
+  var prevOver = "";
   var renderedEvents = "";
+  var bestQuarter = load(GAME, "best-quarter", 0);
+  var sustainedCount = load(GAME, "sustained-count", 0);
   var hits = [];
+  var savedRun = load(GAME, "run", null);
+  var hasSave = !!(savedRun && savedRun.s && !savedRun.s.over);
+  if (hasSave) bootChoice = "";
+  else {
+    bootChoice = "new";
+    sim.reset();
+  }
+  function newRun() {
+    sim.reset();
+    pane = 0;
+    prevBacklashTotal = 0;
+    prevOver = "";
+    stingRestart();
+  }
   PANES.forEach((p, i) => {
     const b = document.createElement("button");
     b.textContent = `${i + 1} ${p.title}`;
@@ -973,19 +1732,76 @@
     });
     tabsEl.appendChild(b);
   });
+  var speedBtns = [];
+  [1, 2, 4].forEach((sp) => {
+    const b = document.createElement("button");
+    b.textContent = `${sp}\xD7`;
+    b.addEventListener("click", () => {
+      speed = sp;
+      sfx.preset("ui");
+    });
+    hudEl.appendChild(b);
+    speedBtns.push(b);
+  });
+  var pauseBtn = document.createElement("button");
+  pauseBtn.textContent = "PAUSE";
+  pauseBtn.addEventListener("click", () => {
+    togglePause();
+  });
+  hudEl.appendChild(pauseBtn);
+  if (muteBtn) {
+    const paint = () => {
+      muteBtn.textContent = sfx.muted ? "SOUND OFF" : "SOUND ON";
+    };
+    muteBtn.addEventListener("click", () => {
+      sfx.setMuted(!sfx.muted);
+      muted = sfx.muted;
+      save(GAME, "muted", muted);
+      paint();
+    });
+    paint();
+  }
+  function togglePause() {
+    if (bootChoice === "" || sim.s.over) return;
+    paused = !paused;
+    sfx.preset("ui");
+  }
   function setPane(i) {
     pane = Math.max(0, Math.min(PANES.length - 1, i));
   }
-  function startMusicOnce() {
+  function startMusic() {
     if (musicStarted) return;
     musicStarted = true;
-    sfx.startMusic([196, 0, 0, 147, 0, 0, 165, 0, 196, 0, 0, 131, 0, 0, 0, 0], 320);
+    sfx.playSong(musicVariant === 0 ? SONG_MAJOR : SONG_MINOR);
+    musicStartedAt = performance.now();
   }
-  function restart() {
-    sim.reset();
-    prevBacklash = 0;
-    sfx.preset("ui");
+  function switchMusic(variant) {
+    if (!musicStarted || variant === musicVariant || musicSwitchPending) return;
+    musicSwitchPending = true;
+    const loopMs = 32 * STEP_MS;
+    const elapsed = performance.now() - musicStartedAt;
+    const delay = Math.max(30, loopMs - elapsed % loopMs);
+    window.setTimeout(() => {
+      sfx.playSong(variant === 0 ? SONG_MAJOR : SONG_MINOR);
+      musicStartedAt = performance.now();
+      musicVariant = variant;
+      musicSwitchPending = false;
+    }, delay);
   }
+  function layout() {
+    const vp = viewport();
+    const chromeH = hudEl.offsetHeight + tabsEl.offsetHeight + logEl.offsetHeight;
+    const avail = { width: vp.width, height: vp.height - chromeH };
+    const s = fitIntegerScale(W, H, avail, 4);
+    const off = letterboxOffset(W, H, s, avail);
+    cachedScale = s;
+    wrap.style.width = `${W * s}px`;
+    wrap.style.left = `${off.x}px`;
+    wrap.style.top = `${off.y}px`;
+    cv.style.width = `${W * s}px`;
+    cv.style.height = `${H * s}px`;
+  }
+  window.addEventListener("resize", layout);
   function pollInput() {
     const p = input.pointer;
     if (input.wasPressed("slot1")) setPane(0);
@@ -993,9 +1809,16 @@
     else if (input.wasPressed("slot3")) setPane(2);
     else if (input.wasPressed("action")) setPane(3);
     if (p.tapped) {
-      startMusicOnce();
-      if (sim.s.over) {
-        restart();
+      startMusic();
+      if (bootChoice === "") {
+        for (const h of hits) {
+          if (p.x > h.x && p.x < h.x + h.w && p.y > h.y && p.y < h.y + h.h) {
+            h.fn();
+            break;
+          }
+        }
+      } else if (sim.s.over) {
+        newRun();
       } else {
         for (const h of hits) {
           if (p.x > h.x && p.x < h.x + h.w && p.y > h.y && p.y < h.y + h.h) {
@@ -1005,136 +1828,505 @@
         }
       }
     }
-    if (sim.s.over && (input.wasPressed("fire") || input.wasPressed("action"))) restart();
+    if (bootChoice !== "" && !sim.s.over) {
+      if (input.wasPressed("pause")) togglePause();
+      if (input.wasPressed("fire")) {
+        speed = speed === 4 ? 1 : speed * 2;
+        sfx.preset("ui");
+      }
+    }
+    if (sim.s.over && (input.wasPressed("fire") || input.wasPressed("action") || input.wasPressed("pause"))) newRun();
   }
-  function meter(x, y, w, v, max, col, label) {
-    ctx.fillStyle = "#999";
-    ctx.fillRect(x, y, w, 14);
+  window.addEventListener("keydown", (e) => {
+    if (e.target?.tagName === "INPUT") return;
+    if (e.code === "KeyM") {
+      sfx.setMuted(!sfx.muted);
+      muted = sfx.muted;
+      save(GAME, "muted", muted);
+    } else if (e.code === "BracketLeft" || e.code === "BracketRight") {
+      volume = Math.max(0, Math.min(1, volume + (e.code === "BracketRight" ? 0.1 : -0.1)));
+      sfx.volume = volume;
+      save(GAME, "volume", volume);
+    }
+  });
+  var FONT = (px, bold = false) => `${bold ? "bold " : ""}${px}px monospace`;
+  function bar(x, y, w, h, frac, col) {
+    ctx.fillStyle = "#00000022";
+    ctx.fillRect(x, y, w, h);
     ctx.fillStyle = col;
-    ctx.fillRect(x, y, w * Math.min(1, v / max), 14);
-    ctx.fillStyle = "#222";
-    ctx.font = "12px monospace";
-    ctx.fillText(`${label} ${v.toFixed(0)}`, x + 4, y + 11);
+    ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), h);
+  }
+  function label(x, y, text, col = "#222", px = 10, bold = false) {
+    ctx.fillStyle = col;
+    ctx.font = FONT(px, bold);
+    ctx.fillText(text, x, y);
+  }
+  function actionButtons(key, x, y, w, h, cols) {
+    const s = sim.s;
+    const actions = sim.actions[key];
+    const rows = Math.ceil(actions.length / cols);
+    const gap = 4;
+    const bw = (w - (cols - 1) * gap) / cols;
+    const bh = Math.min(20, (h - (rows - 1) * gap) / rows);
+    actions.forEach((a, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const bx = x + col * (bw + gap);
+      const by = y + row * (bh + gap);
+      const txt = a.label(s);
+      const hint = s.over ? "game over" : a.hint(s);
+      const broke = a.cost > 0 && s.cash < a.cost;
+      const dead = hint !== null || broke;
+      ctx.fillStyle = dead ? "#9a8f7d" : a.cost > 0 ? "#4a6fa5" : "#5c7a4a";
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(bx, by, bw, bh);
+      ctx.clip();
+      ctx.fillStyle = dead ? "#00000055" : "#fff";
+      ctx.font = FONT(8.5);
+      ctx.fillText(txt, bx + 4, by + bh - 6);
+      if (dead && hint) {
+        ctx.fillStyle = "#ffe066";
+        ctx.fillText(`\xD7 ${hint}`, bx + 4, by + bh + 6 > by + bh ? by + 8 : by + 8);
+      }
+      ctx.restore();
+      if (!dead) {
+        hits.push({
+          x: bx,
+          y: by,
+          w: bw,
+          h: bh,
+          fn: () => {
+            const r = sim.act(key, i);
+            sfx.preset(r !== null ? a.cost > 0 ? "buy" : "ui" : "hit");
+          }
+        });
+      }
+    });
+    return rows * bh + (rows - 1) * gap;
+  }
+  function sceneFarm(x, y, w, h) {
+    const s = sim.s;
+    const grid = 3;
+    const size = Math.min(40, Math.floor(Math.min((w - 8) / grid, (h - 16) / grid)) - 3);
+    const ox = x + 4;
+    const oy = y + 4;
+    s.plots.forEach((p, i) => {
+      const px = ox + i % grid * (size + 3);
+      const py = oy + Math.floor(i / grid) * (size + 3);
+      if (p.kind === "jungle") {
+        ctx.fillStyle = "#1f5c33";
+        ctx.fillRect(px, py, size, size);
+        ctx.fillStyle = "#2f8f4a";
+        for (let t = 0; t < 4; t++) ctx.fillRect(px + 3 + t % 2 * (size / 2), py + 3 + Math.floor(t / 2) * (size / 2), size / 4, size / 4);
+      } else if (p.kind === "sale") {
+        ctx.fillStyle = "#c9b993";
+        ctx.fillRect(px, py, size, size);
+        label(px + size / 2 - 5, py + size / 2 + 5, "$", "#6b543a", 14, true);
+      } else if (p.kind === "empty") {
+        ctx.fillStyle = "#8a6a45";
+        ctx.fillRect(px, py, size, size);
+        ctx.fillStyle = "#75593a";
+        ctx.fillRect(px + 2, py + size - 8, size - 4, 2);
+        ctx.fillRect(px + 2, py + size - 4, size - 4, 2);
+      } else if (p.kind === "pasture") {
+        ctx.fillStyle = "#7fb069";
+        ctx.fillRect(px, py, size, size);
+        ctx.strokeStyle = "#5c8a4a";
+        ctx.lineWidth = 1;
+        for (let f = 1; f < 3; f++) {
+          ctx.beginPath();
+          ctx.moveTo(px, py + f * size / 3);
+          ctx.lineTo(px + size, py + f * size / 3);
+          ctx.stroke();
+        }
+        for (let c = 0; c < Math.min(6, Math.round(p.cattle)); c++) {
+          ctx.fillStyle = "#8a5a2b";
+          ctx.fillRect(px + 4 + c % 3 * (size / 3), py + 4 + Math.floor(c / 3) * (size / 2), 6, 4);
+        }
+      } else {
+        const soy = p.kind === "soy";
+        ctx.fillStyle = soy ? "#5f7a3a" : "#a08428";
+        ctx.fillRect(px, py, size, size);
+        ctx.fillStyle = soy ? "#8cb86a" : "#d8b64a";
+        ctx.fillRect(px + 2, py + 2 + (size - 6) * (1 - p.growth), size - 4, (size - 6) * p.growth);
+        ctx.fillStyle = "#00000033";
+        for (let r = 0; r < 3; r++) ctx.fillRect(px + 2, py + 4 + r * (size / 3), size - 4, 2);
+      }
+      ctx.strokeStyle = "#3a2d1e";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px, py, size, size);
+    });
+    const sx = ox + grid * (size + 3) + 8;
+    label(sx, oy + 12, `FEED STORE ${Math.round(s.crops)}`, "#333", 10, true);
+    bar(sx, oy + 16, w - (sx - x) - 4, 7, s.crops / 150, "#2b8a3e");
+    const pastureHead = s.plots.reduce((n, p) => n + (p.kind === "pasture" ? p.cattle : 0), 0);
+    label(sx, oy + 36, `PASTURE ${Math.round(pastureHead)} head`, "#333", 10, true);
+    label(sx, oy + 50, `FIELDS ${ownedPlots(s)}/9 owned`, "#333", 10);
+    label(sx, oy + 64, s.hormones ? "HORMONES ON (risk!)" : "hormones off", s.hormones ? "#c2255c" : "#555", 10, s.hormones);
+  }
+  function sceneFeed(x, y, w, h) {
+    const s = sim.s;
+    label(x + 4, y + 12, "FEED DIAL", "#333", 10, true);
+    FEEDS.forEach((f, i) => {
+      const on = s.feedIdx === i;
+      ctx.fillStyle = i === 2 ? on ? "#c2255c" : "#00000022" : i === 1 ? on ? "#b8860b" : "#00000022" : on ? "#2b8a3e" : "#00000022";
+      ctx.fillRect(x + 4 + i * 62, y + 16, 58, 13);
+      ctx.fillStyle = on ? "#fff" : "#666";
+      ctx.font = FONT(8.5);
+      ctx.fillText(`${f.name} ${f.cost}/hd`, x + 8 + i * 62, y + 26);
+    });
+    const penY = y + 36;
+    const penH = h - 36 - 26;
+    ctx.fillStyle = "#d9c9a8";
+    ctx.fillRect(x + 4, penY, w - 8, penH);
+    ctx.strokeStyle = "#8a6a45";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 4, penY, w - 8, penH);
+    const herd = herdSize(s);
+    const cols = 12;
+    for (let i = 0; i < Math.min(36, Math.ceil(herd)); i++) {
+      const cx = x + 12 + i % cols * ((w - 24) / cols);
+      const cy = penY + 10 + Math.floor(i / cols) * 18;
+      const ready = i >= Math.ceil(herd - s.readyCattle);
+      ctx.fillStyle = ready ? "#7c2418" : isSick(s) && i % 4 === 0 ? "#d9480b" : "#8a5a2b";
+      ctx.fillRect(cx, cy, 10, 7);
+      ctx.fillRect(cx + 2, cy - 3, 3, 3);
+      ctx.fillRect(cx + 1, cy + 7, 2, 2);
+      ctx.fillRect(cx + 7, cy + 7, 2, 2);
+    }
+    label(x + 10, penY + penH - 6, `PENS ${Math.round(herd)}/${s.penCap} \xB7 slaughter cap ${slaughterCap(s).toFixed(1)}/Q${herd > s.penCap ? " \xB7 OVERCROWDED" : ""}`, "#5b4a33", 9);
+    if (isSick(s)) label(x + w - 84, penY + 12, "\u2623 SICK HERD", "#c2255c", 11, true);
+    const ly = y + h - 20;
+    label(x + 4, ly + 8, `DISEASE ${Math.round(s.disease)}`, "#333", 9, true);
+    bar(x + 76, ly + 1, 80, 8, s.disease / 100, s.disease > 60 ? "#c2255c" : "#e8590c");
+    label(x + 168, ly + 8, `LAGOON ${Math.round(s.waste)}`, "#333", 9, true);
+    bar(x + 232, ly + 1, w - 236, 8, s.waste / 100, s.waste > 70 ? "#a61e4d" : "#b08968");
+    label(x + 4, y + 28, `PATTY STOCK ${Math.round(s.patties)}`, "#333", 9);
+  }
+  function sceneRest(x, y, w, h) {
+    const s = sim.s;
+    ctx.fillStyle = "#b03a2e";
+    ctx.fillRect(x + 4, y + 4, w - 8, 14);
+    for (let i = 0; i < s.cashiers; i++) {
+      ctx.fillStyle = "#f4eddf";
+      ctx.fillRect(x + 12 + i * 26, y + 7, 8, 8);
+      ctx.fillStyle = "#4a6fa5";
+      ctx.fillRect(x + 13 + i * 26, y + 8, 6, 4);
+    }
+    label(x + w - 120, y + 14, `CASHIERS ${s.cashiers}  COOKS ${s.cooks}`, "#fff", 9, true);
+    ctx.fillStyle = "#495057";
+    ctx.fillRect(x + 4, y + 20, w - 8, 10);
+    for (let i = 0; i < s.cooks; i++) {
+      ctx.fillStyle = "#ffe066";
+      ctx.fillRect(x + 12 + i * 20, y + 22, 7, 6);
+    }
+    const qn = Math.round(s.queueFrac * 14);
+    for (let i = 0; i < qn; i++) {
+      const qx = x + 16 + i % 7 * 24;
+      const qy = y + 46 + Math.floor(i / 7) * 16 + Math.sin(performance.now() / 400 + i) * 1.5;
+      ctx.fillStyle = ["#4a6fa5", "#c2255c", "#2b8a3e", "#a61e4d"][i % 4];
+      ctx.fillRect(qx, qy, 8, 9);
+      ctx.fillStyle = "#e8d5b5";
+      ctx.fillRect(qx + 1, qy - 4, 6, 5);
+    }
+    if (s.strikeQ > 0) label(x + w / 2 - 60, y + 44, "\u26D4 STRIKE \u2014 CLOSED", "#c2255c", 13, true);
+    else if (s.closedQ > 0) label(x + w / 2 - 90, y + 44, "\u26D4 SHUT BY INSPECTORS", "#c2255c", 13, true);
+    ctx.fillStyle = "#ffd43b";
+    ctx.fillRect(x + w - 86, y + 40, 80, 26);
+    ctx.strokeStyle = "#3a2d1e";
+    ctx.strokeRect(x + w - 86, y + 40, 80, 26);
+    label(x + w - 78, y + 58, `${s.price.toFixed(2)}`, "#222", 16, true);
+    label(x + w - 44, y + 53, "/burger", "#5b4a33", 8);
+    const badges = [];
+    if (s.mkt.tv > 0) badges.push(`TV ${s.mkt.tv}Q`);
+    if (s.mkt.toy > 0) badges.push(`TOYS ${s.mkt.toy}Q`);
+    if (s.mkt.jingle > 0) badges.push(`JINGLE ${s.mkt.jingle}Q`);
+    if (s.mkt.mascot) badges.push("SPEEDY");
+    badges.forEach((btxt, i) => {
+      ctx.fillStyle = "#4a6fa5";
+      ctx.fillRect(x + 6 + i * 64, y + h - 26, 60, 12);
+      label(x + 10 + i * 64, y + h - 17, btxt, "#fff", 8.5);
+    });
+    if (s.mkt.mascot) drawIcon(ctx, "beaver", x + w - 118, y + 40, 26);
+    label(x + 6, y + h - 34, `TRAFFIC ${Math.round(trafficNow(s))}/Q \xB7 SERVED ${Math.round(s.lastServed)}/Q`, "#333", 9, true);
+    label(x + 6, y + 38, s.outbreakQ > 0 ? "\u2620 POISONING OUTBREAK \u2014 sales crash" : s.stormQ > 0 ? "\u26A1 MEDIA STORM" : "", "#c2255c", 10, true);
+  }
+  function sceneHQ(x, y, w, h) {
+    const s = sim.s;
+    label(x + 4, y + 12, `QUARTERLY PROFIT ${Math.round(s.lastProfit)} / TARGET ${targetNow(s)}`, "#333", 10, true);
+    const pf = s.lastProfit / Math.max(targetNow(s), 1);
+    bar(x + 4, y + 16, w - 8, 9, pf, pf >= 1 ? "#2b8a3e" : pf > 0.6 ? "#e8590c" : "#c2255c");
+    label(x + 4, y + 38, `BOARD PATIENCE ${Math.round(s.patience)}`, s.patience < 30 ? "#c2255c" : "#333", 10, true);
+    bar(x + 4, y + 42, w - 8, 9, s.patience / 100, s.patience < 30 ? "#c2255c" : "#4a6fa5");
+    const cols = [
+      ["ACT", s.backlash.act, "#e8590c"],
+      ["MED", s.backlash.med, "#c2255c"],
+      ["CLI", s.backlash.cli, "#2b8a3e"],
+      ["UNI", s.backlash.uni, "#a61e4d"]
+    ];
+    const bw = (w - 40) / 4;
+    cols.forEach(([name, v, col], i) => {
+      const bx = x + 8 + i * (bw + 8);
+      const ch = h - 78;
+      ctx.fillStyle = "#00000018";
+      ctx.fillRect(bx, y + 58, bw - 8, ch);
+      ctx.fillStyle = col;
+      ctx.fillRect(bx, y + 58 + ch * (1 - v / 100), bw - 8, ch * (v / 100));
+      label(bx, y + h - 14, `${name} ${Math.round(v)}`, col, 9, true);
+    });
+    const chips = [];
+    if (s.bribeN > 0) chips.push(`NUTRITIONIST ${s.bribeN}Q`);
+    if (s.bribeC > 0) chips.push(`CLIMATOLOGIST ${s.bribeC}Q`);
+    if (s.bust > 0) chips.push(`UNION-BUST ${s.bust}Q`);
+    if (s.lobby > 0) chips.push(`LOBBY ${s.lobby}Q`);
+    label(x + 4, y + h - 26, chips.length ? chips.join(" \xB7 ") : "no active levers", "#5b4a33", 8.5);
+    label(x + 4, y + h - 40, `BOYCOTT \xD7${(1 - Math.min(0.8, totalBacklash(s) / 520)).toFixed(2)} traffic \xB7 REP ${Math.round(reputation(s))}`, "#333", 8.5);
   }
   function drawPane(key, index, x, y, w, h, grid) {
-    const s = sim.s;
     const active = index === pane;
-    ctx.fillStyle = active && grid ? "#d7e7f7" : "#f4eddf";
+    ctx.fillStyle = active || !grid ? "#f4eddf" : "#e6dcc4";
     ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = active && grid ? "#4a6fa5" : "#9a8f7d";
     ctx.lineWidth = active && grid ? 3 : 1;
     ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-    ctx.fillStyle = "#222";
-    ctx.font = "bold 16px monospace";
-    ctx.fillText(`${index + 1} ${PANES[index].title}`, x + 14, y + 25);
-    const iconSize = grid ? 24 : 32;
-    drawIcon(ctx, key, x + w - iconSize - 10, y + 6, iconSize);
-    const actions = sim.actions[key];
-    const actionH = grid ? 34 : 48;
-    const actionGap = grid ? 7 : 16;
-    const actionW = grid ? Math.min(270, w - 28) : 560;
-    actions.forEach((a, i) => {
-      const ay = y + 38 + i * (actionH + actionGap);
-      ctx.fillStyle = a.dirty ? "#8b2c2c" : "#4a6fa5";
-      ctx.fillRect(x + 14, ay, actionW, actionH);
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x + 14, ay, actionW, actionH);
-      ctx.clip();
-      ctx.fillStyle = "#fff";
-      ctx.font = `${grid ? 9 : 15}px monospace`;
-      ctx.fillText(a.label, x + 20, ay + (grid ? 21 : 30));
-      ctx.restore();
-      hits.push({
-        x: x + 14,
-        y: ay,
-        w: actionW,
-        h: actionH,
-        fn: () => {
-          if (sim.act(key, i) !== null) sfx.preset("ui");
-        }
-      });
+    ctx.fillStyle = "#3a2d1e";
+    ctx.fillRect(x + 2, y + 2, w - 4, 18);
+    label(x + 8, y + 15, `${index + 1} ${PANES[index].title}`, "#f4eddf", 11, true);
+    const iconSize = grid ? 16 : 20;
+    drawIcon(ctx, key, x + w - iconSize - 6, y + 3, iconSize);
+    const headerH = 24;
+    const actionsH = grid ? 50 : 74;
+    const sceneY = y + headerH;
+    const sceneH = h - headerH - actionsH - 4;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x + 2, sceneY, w - 4, sceneH);
+    ctx.clip();
+    if (key === "farm") sceneFarm(x + 2, sceneY, w - 4, sceneH);
+    else if (key === "feed") sceneFeed(x + 2, sceneY, w - 4, sceneH);
+    else if (key === "rest") sceneRest(x + 2, sceneY, w - 4, sceneH);
+    else sceneHQ(x + 2, sceneY, w - 4, sceneH);
+    ctx.restore();
+    actionButtons(key, x + 4, y + h - actionsH + 2, w - 8, actionsH - 4, grid ? 4 : 5);
+  }
+  function dim() {
+    ctx.fillStyle = "rgba(20,16,10,0.78)";
+    ctx.fillRect(0, 0, W, H);
+  }
+  function centered(y, text, px, col = "#fff", bold = true) {
+    ctx.fillStyle = col;
+    ctx.font = FONT(px, bold);
+    ctx.textAlign = "center";
+    ctx.fillText(text, W / 2, y);
+    ctx.textAlign = "left";
+  }
+  function bigButton(cx, cy, w, h, text, fn) {
+    ctx.fillStyle = "#4a6fa5";
+    ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+    ctx.strokeStyle = "#f4eddf";
+    ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+    ctx.fillStyle = "#fff";
+    ctx.font = FONT(13, true);
+    ctx.textAlign = "center";
+    ctx.fillText(text, cx, cy + 5);
+    ctx.textAlign = "left";
+    hits.push({ x: cx - w / 2, y: cy - h / 2, w, h, fn });
+  }
+  function drawBootPrompt() {
+    dim();
+    centered(120, "BURGER TYCOON", 34, "#ffd43b");
+    centered(146, "four panes \xB7 one conscience \xB7 sixteen quarters", 12, "#ccc", false);
+    const q = savedRun.s;
+    centered(196, `SAVED RUN FOUND \u2014 QUARTER ${q?.quarter ?? "?"}`, 14, "#8ce99a");
+    bigButton(W / 2 - 110, 250, 180, 34, "RESUME RUN", () => {
+      sim.restore(savedRun.s, savedRun.events);
+      bootChoice = "resume";
+      sfx.preset("ui");
     });
-    const mx = grid ? x + actionW + 14 : x + 596;
-    const mw = grid ? w - (mx - x) - 14 : 300;
-    ctx.font = "11px monospace";
-    ctx.fillStyle = "#222";
-    if (key === "farm") {
-      meter(mx, y + 44, mw, s.crops, 100, "#2b8a3e", "CROPS");
-      meter(mx, y + 68, mw, s.cattle, 50, "#a0522d", "CATTLE");
-      if (s.dirty.deforest) ctx.fillText("rainforest burning\u2026", mx, y + 104);
-    } else if (key === "feed") {
-      meter(mx, y + 44, mw, s.patties, 60, "#d6336c", "PATTIES");
-      meter(mx, y + 68, mw, s.cattle, 50, "#a0522d", "CATTLE");
-      meter(mx, y + 92, mw, s.disease, 20, "#e8590c", "DISEASE");
-    } else if (key === "rest") {
-      meter(mx, y + 44, mw, s.patties, 60, "#d6336c", "PATTY STOCK");
-      meter(mx, y + 68, mw, s.demand, 3, "#1971c2", "DEMAND");
-    } else {
-      meter(mx, y + 44, mw, s.backlash, 100, "#e8590c", "BACKLASH");
-      meter(mx, y + 68, mw, s.boardPressure, 100, "#c2255c", "BOARD");
+    bigButton(W / 2 + 110, 250, 180, 34, "NEW GAME", () => {
+      bootChoice = "new";
+      newRun();
+    });
+  }
+  function drawPause() {
+    dim();
+    centered(150, "PAUSED", 30, "#ffd43b");
+    centered(176, `Q${sim.s.quarter}/${QUARTERS} \xB7 speed ${speed}\xD7 \xB7 ESC resumes`, 12, "#ccc", false);
+    bigButton(W / 2 - 120, 226, 170, 32, "RESUME (ESC)", () => togglePause());
+    bigButton(W / 2 + 120, 226, 170, 32, "RESTART RUN", () => {
+      paused = false;
+      newRun();
+    });
+    centered(280, "keys: 1-4 panes \xB7 F speed \xB7 M mute \xB7 [ ] volume", 11, "#999", false);
+  }
+  function drawOver() {
+    const s = sim.s;
+    dim();
+    const good = s.over === "sustained";
+    centered(96, good ? "SUSTAINED" : "GAME OVER", 34, good ? "#8ce99a" : "#ff8787");
+    centered(124, s.overReason, 13, "#ffd43b");
+    let yy = 156;
+    ctx.font = FONT(11.5);
+    ctx.fillStyle = "#ddd";
+    ctx.textAlign = "center";
+    for (const line of s.overDetail) {
+      ctx.fillText(line, W / 2, yy);
+      yy += 18;
     }
+    ctx.textAlign = "left";
+    centered(yy + 6, `quarters survived ${Math.min(s.quarter, QUARTERS)}/${QUARTERS} \xB7 best run Q${bestQuarter} \xB7 sustained endings ${sustainedCount}`, 11, "#999", false);
+    centered(yy + 30, "CLICK / TAP / SPACE \u2014 RUN IT AGAIN", 13, "#fff");
+    if (good) drawIcon(ctx, "beaver", W / 2 - 16, yy + 44, 32);
   }
   function draw() {
     const s = sim.s;
     [...tabsEl.children].forEach((b, i) => b.className = i === pane ? "on" : "");
-    hudEl.innerHTML = `<span>CASH <b>${s.cash.toFixed(0)}</b></span><span>REP <b>${s.rep.toFixed(0)}</b></span><span>BACKLASH <b>${s.backlash.toFixed(0)}</b></span><span>BOARD <b>${s.boardPressure.toFixed(0)}</b></span><span>DEMAND <b>${s.demand.toFixed(1)}x</b></span><span>PROFIT <b>${s.lastProfit.toFixed(1)}/s</b></span><span>OVERHEAD <b>-${s.rates.overhead}/s</b></span><span>TIME <b>${s.t.toFixed(0)}s</b></span><span>BEST <b>${best.toFixed(0)}s</b></span>`;
+    const cashCol = s.cash < 200 ? "#ff8787" : "#ffd43b";
+    setHud(0, `CASH ${Math.round(s.cash)}`, cashCol);
+    setHud(1, `Q ${Math.min(s.quarter, QUARTERS)}/${QUARTERS} ${(s.qProg * 100).toFixed(0)}%`);
+    setHud(2, `PROFIT ${Math.round(s.lastProfit)}/${targetNow(s)}`, s.lastProfit >= targetNow(s) ? "#8ce99a" : "#ff8787");
+    setHud(3, `PATIENCE ${Math.round(s.patience)}`, s.patience < 30 ? "#ff8787" : "#eee");
+    setHud(4, `BACKLASH ${Math.round(totalBacklash(s))}`, totalBacklash(s) > 180 ? "#ff8787" : "#eee");
+    speedBtns.forEach((b, i) => {
+      b.className = speed === [1, 2, 4][i] ? "on" : "";
+    });
+    pauseBtn.textContent = paused ? "RESUME" : "PAUSE";
     const newestEvent = sim.events[0] ?? "";
     if (renderedEvents !== newestEvent) {
       renderedEvents = newestEvent;
-      logEl.innerHTML = sim.events.map((e) => `<div>${e}</div>`).join("");
+      logEl.innerHTML = sim.events.slice(0, 6).map((e) => `<div>${e}</div>`).join("");
     }
     ctx.fillStyle = "#e8e0d0";
     ctx.fillRect(0, 0, W, H);
     hits = [];
     const grid = cv.clientWidth >= 900;
     if (grid) {
+      ctx.fillStyle = "#4a6fa5";
+      ctx.fillRect(0, 0, W * (sim.s.over ? 1 : s.qProg), 3);
       const pw = W / 2;
-      const ph = 190;
-      PANES.forEach((p, i) => drawPane(p.key, i, i % 2 * pw, Math.floor(i / 2) * ph, pw, ph, true));
+      const ph = (H - 3) / 2;
+      PANES.forEach((p, i) => drawPane(p.key, i, i % 2 * pw, 3 + Math.floor(i / 2) * ph, pw, ph, true));
       ctx.fillStyle = "#666";
-      ctx.font = "11px monospace";
-      ctx.fillText("Grid view \xB7 keys 1-4 highlight panes \xB7 click actions \xB7 sim runs while idle", 14, H - 12);
-      drawWordmark(ctx, W - 236, H - 32, 18);
+      ctx.font = FONT(9);
+      ctx.fillText("keys 1-4 panes \xB7 F speed \xB7 ESC pause \xB7 click levers \xB7 the board is watching", 8, H - 4);
+      drawWordmark(ctx, W - 210, H - 26, 16);
     } else {
       drawPane(PANES[pane].key, pane, 0, 0, W, H, false);
-      ctx.fillStyle = "#666";
-      ctx.font = "12px monospace";
-      ctx.fillText("Click actions \xB7 keys 1-4 switch panes \xB7 sim runs while idle \u2014 INTERNAL replica", 24, H - 14);
     }
-    if (s.over) {
-      ctx.fillStyle = "rgba(0,0,0,.6)";
-      ctx.fillRect(0, 140, W, 140);
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 26px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", W / 2, 190);
-      ctx.font = "15px monospace";
-      ctx.fillText(s.overReason, W / 2, 220);
-      ctx.fillText(`survived ${s.t.toFixed(0)}s \xB7 best ${best.toFixed(0)}s \u2014 click / tap / SPACE to restart`, W / 2, 250);
-      ctx.textAlign = "left";
+    if (bootChoice === "") drawBootPrompt();
+    else if (s.over) drawOver();
+    else if (paused) drawPause();
+  }
+  var hudSpans = [];
+  function setHud(i, text, col = "#eee") {
+    while (hudSpans.length <= i) {
+      const span = document.createElement("span");
+      hudEl.insertBefore(span, speedBtns[0] ?? null);
+      hudSpans.push(span);
     }
+    hudSpans[i].innerHTML = `<b style="color:${col}">${text}</b>`;
   }
   var last = performance.now();
   function frame(now) {
-    const dt = Math.min(0.25, (now - last) / 1e3);
+    const dtReal = Math.min(0.25, (now - last) / 1e3);
     last = now;
     pollInput();
     input.endFrame();
-    sim.tick(dt);
-    if (sim.s.backlash > 60 && prevBacklash <= 60) sfx.preset("hit");
-    prevBacklash = sim.s.backlash;
-    if (sim.s.over && sim.s.t > best) {
-      best = sim.s.t;
-      save("burger-tycoon", "best-time", best);
+    if (bootChoice !== "" && !paused) {
+      sim.tick(dtReal * speed / QUARTER_SECONDS);
+    }
+    const s = sim.s;
+    const bl = totalBacklash(s);
+    if (bl >= 45 && prevBacklashTotal < 45) switchMusic(1);
+    if (bl < 28 && prevBacklashTotal >= 28) switchMusic(0);
+    prevBacklashTotal = bl;
+    if (s.over && prevOver !== s.over) {
+      if (s.over === "sustained") sfx.preset("cash");
+      else {
+        sfx.preset("scandal");
+        stingFail();
+      }
+    }
+    prevOver = s.over;
+    if (s.quarter > bestQuarter && !s.over) {
+      bestQuarter = s.quarter - 1;
+      save(GAME, "best-quarter", bestQuarter);
     }
     draw();
     requestAnimationFrame(frame);
   }
+  var prevProfitGood = { v: false };
+  sim.onQuarter = () => {
+    const s = sim.s;
+    if (s.over) {
+      save(GAME, "run", null);
+      if (s.quarter - 1 > bestQuarter) {
+        bestQuarter = s.quarter - 1;
+        save(GAME, "best-quarter", bestQuarter);
+      }
+      if (s.over === "sustained") {
+        sustainedCount++;
+        save(GAME, "sustained-count", sustainedCount);
+      }
+      return;
+    }
+    save(GAME, "run", { v: 2, s: sim.s, events: sim.events });
+    const good = s.lastProfit >= targetNow(s);
+    if (good && !prevProfitGood.v) sfx.preset("cash");
+    prevProfitGood.v = good;
+  };
   layout();
   requestAnimationFrame(frame);
   if (new URLSearchParams(location.search).has("debug")) {
-    window.__maga = { sim, setPane, input, sfx };
+    const w = window;
+    w.__maga = {
+      get quarter() {
+        return sim.s.quarter;
+      },
+      get cash() {
+        return Math.round(sim.s.cash);
+      },
+      get profit() {
+        return Math.round(sim.s.lastProfit);
+      },
+      get backlash() {
+        return sim.summary().backlash;
+      },
+      get boardPatience() {
+        return Math.round(sim.s.patience);
+      },
+      get panes() {
+        return sim.summary().panes;
+      },
+      get paused() {
+        return paused;
+      },
+      get speed() {
+        return speed;
+      },
+      summary: () => sim.summary(),
+      sim,
+      setPane,
+      input,
+      sfx,
+      setSpeed: (v) => {
+        speed = v;
+      },
+      setPaused: (v) => {
+        paused = v;
+      },
+      clickAt: (x, y) => {
+        for (const h of hits) {
+          if (x > h.x && x < h.x + h.w && y > h.y && y < h.y + h.h) {
+            h.fn();
+            return true;
+          }
+        }
+        return false;
+      }
+    };
   }
 })();
 

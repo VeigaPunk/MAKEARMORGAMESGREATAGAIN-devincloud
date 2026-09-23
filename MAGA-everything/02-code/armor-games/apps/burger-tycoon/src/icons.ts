@@ -89,7 +89,24 @@ SPRITES.hq = SIZES.map(() => buildSprite(SIZE, [
   ['#9a8f7d', 0, 14, 16, 2],        // pavement
 ]));
 
-export type IconKey = 'farm' | 'feed' | 'rest' | 'hq';
+// SPEEDY — the costumed beaver mascot (original evocation; red cap, buck teeth)
+SPRITES.beaver = SIZES.map(() => buildSprite(SIZE, [
+  ['#8a5a2b', 2, 3, 3, 3],           // left ear
+  ['#8a5a2b', 11, 3, 3, 3],          // right ear
+  ['#a9743c', 3, 4, 10, 10],         // head
+  ['#d9480b', 3, 1, 10, 3],          // promo cap
+  ['#a33208', 2, 3, 12, 1],          // cap brim
+  ['#222', 5, 7, 2, 2],              // eyes
+  ['#222', 9, 7, 2, 2],
+  ['#c9a06a', 5, 10, 6, 4],          // muzzle
+  ['#3a2d1e', 7, 8, 2, 2],           // nose
+  ['#fff', 7, 11, 1, 2],             // buck teeth
+  ['#fff', 9, 11, 1, 2],
+  ['#8a5a2b', 1, 9, 2, 1],           // whisker hints
+  ['#8a5a2b', 13, 9, 2, 1],
+]));
+
+export type IconKey = 'farm' | 'feed' | 'rest' | 'hq' | 'beaver';
 
 /** Draw a pane icon sprite at (x, y) with a 1px dark outline shadow. */
 export function drawIcon(g: CanvasRenderingContext2D, key: IconKey, x: number, y: number, size = 32): void {
