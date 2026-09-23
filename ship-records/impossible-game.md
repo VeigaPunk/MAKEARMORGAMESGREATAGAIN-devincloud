@@ -1,62 +1,105 @@
 # The Impossible Game — ship record
 
 Original: The Impossible Game (Fluke Games; feel reference = 2010 Lite Flash
-release; content target = the full game). One-button rhythm autorunner,
-fixed-impulse jump, instant respawn, practice mode with checkpoints, medals.
-Player-facing name for our build: **THE IMPOSSIBLE GAME** kept as genre-title
-evocation? → **IMPOSSIBLE RUN** (final call at ship; see rights note).
+release; content target = the full game). Shipped title (original evocation):
+**IMPOSSIBLE RUN**.
 
 ## Survey (2026-09-22)
 
 | Rendition | Location | State |
 |-----------|----------|-------|
-| TS app (Canvas 2D) | `MAGA-everything/02-code/armor-games/apps/impossible/src/main.ts` (295 lines) | 1 level (~9902px), verified collision parity (gap-kill x=1410, block front-edge x=2967), best-progress persist, ?debug hooks |
-| Prototype | `prototypes/impossible-game.html` (637 lines) | Mechanics proof + practice checkpoints + input-offset calibration + full-clear proof; r6 art pass |
+| TS app (Canvas 2D) | `apps/impossible/src/main.ts` | 1 level, verified collision parity (gap-kill x=1410, block front-edge x=2967) |
+| Prototype | `prototypes/impossible-game.html` | Mechanics proof + practice + calibration + full-clear proof |
 
-## Decision: EXTEND the TS app; PORT proto features
+## Decision: EXTEND the TS app; PORT proto features (binding)
 
 App is canonical (chrome, scaling, verified collision). Proto's practice
-checkpoints, calibration, and layout work get ported in. Level campaign built
-fresh on the app's collision-verified core.
+checkpoints ported in; campaign authored fresh on the collision-verified core.
 
-## Content targets (full game, not the Lite slice)
+## Phase 1 lane report (2026-09-23)
 
-- 5 classic-style levels (original evocations of: Fire Aura, Original, Chaoz
-  Fantasy, Heaven, Phazd) — distinct palettes, rhythm-aligned obstacle
-  cadence, escalating difficulty. Level names must be original: e.g.
-  EMBER WAKE, PRIME MOVER, CHAOS DREAM, SKYWARD, PHASE DRIFT.
-- Practice mode: checkpoint flags (drop/toggle), per original.
-- Normal mode: death → instant restart ≤200ms feel; medals (clear / no-death).
-- Music: per-level chip track, beat-aligned obstacle placement (AudioSyncClock
-  gap flagged in MECHANICS-DIGEST §6 — close it).
-- Persistence: best progress per level, medal state.
+**Campaign — 5 original-evocation tracks (full game, not the Lite slice):**
+EMBER WAKE (fire opener, 135 BPM) · PRIME MOVER (plain square, 120) · CHAOS
+DREAM (dense spike rhythms, 140) · SKYWARD (airy gaps, 110) · PHASE DRIFT
+(finale, 150). 101/84/171/61/195 obstacles; each 2.5–3.25 min at 360px/s.
+All levels + 30 practice checkpoints proven clearable by the bundled solver
+(`tools/prove.mjs`, BFS + jump-window simulation with the game's exact
+physics constants): **ALL LEVELS PASS**, every checkpoint spawn-safe.
 
-## Open defects
+**AudioSyncClock:** obstacles are authored on each level's own 16th-note grid
+(pxStep = 5400/bpm) — one grid step of travel = one 16th note; songs and
+obstacles share the grid so jump windows land on beats. Per-level 2-3 track
+chip songs (bass pump + lead + drums) via arcade-core `playSong`; menu bed;
+music stops on pause and resumes at cube position; death duck 300ms.
 
-- D-35 sub-frame pointer taps dropped (poll edge-detect).
-- D-60 `__proto` hook shadowed (use `__maga`).
-- D-61 debug die() persists unclamped progress.
+**Modes:** NORMAL (die → restart ≤200ms; measured respawn loop: runT 0.19s
+after death, 9 deaths in 7s at the first spike = instant-restart feel) and
+PRACTICE (checkpoint flags: 6 built-in grid-snapped flags per level + C/plant
+your own (toggle, ground-only, block-top planting prevented); practice
+respawn at flag verified live — cube re-appears at flag, not at 0%).
 
-## Ship plan
+**Defects:**
+- **D-35** fixed: pointerdown/keydown are event-queued (`pendingJump`/
+  `pendingPtr` consumed next frame) — no per-frame edge polling.
+- **D-60**: `__maga` is the only window hook.
+- **D-61**: all persisted progress clamped [0,1] at load AND save.
+- **Letterbox pointer offset (found in my verification, boxhead D-09 class)**:
+  `toLogical` divided by scale without subtracting canvas origin — every
+  pointer tap landed offset by the letterbox position. Fixed with
+  rect-relative conversion; pointer-driven menus now work (tap-to-start
+  verified end-to-end: select → mode → practice, plus pause-overlay
+  EXIT/RESTART buttons).
 
-1. Campaign: 5 levels, each with authored geometry + music pattern.
-2. Practice mode + checkpoints; medals; level select.
-3. Defects; audio sync clock; chrome parity (pause/settings/volume).
+**Chrome:** title, track select (palette chips, medal, BPM, length, best%,
+lock states), mode screen, pause overlay (RESUME/RESTART/EXIT, pointer +
+Esc/Space), clear screen (medal, NEXT/RETRY/TRACKS), volume row ([ ]/M +
+clickable −/+), progress bar + attempt counter in-run, R quick-restart.
+Touch: whole-canvas tap = jump; practice DROP FLAG touch button.
 
-## Acceptance checklist (to fill at ship)
+**Medals + persistence:** CLEARED (finish) / PERFECT (≤5 deaths) — unlock
+next track; bests + medals persisted via arcade-core storage (verified across
+reload).
 
-- [ ] pending
+## Acceptance checklist
 
-## Verification commands + last results (to fill at ship)
+- [x] 5 levels solver-proven clearable + 30 checkpoints spawn-safe.
+- [x] Boot from file://, zero console errors (re-verified post-fix).
+- [x] Real keyboard: title→select→mode→run; timed Space tap cleared the first
+  lethal gap (best advanced 2.61%→2.77%); death→instant restart verified.
+- [x] Practice: flag drop via C (planted at x=2070), die, respawn at flag.
+- [x] Pause: Esc toggles (music stops/resumes); overlay EXIT exits (pointer).
+- [x] Pointer menus work post-letterbox-fix (full flow driven by taps).
+- [x] Persistence across reload (bests, medals, unlock).
+- [x] Collision parity constants untouched (death at the known gap x≈1410
+  observed in every no-jump run).
+
+## Verification commands + last observed results
 
 ```bash
-# pending
+node MAGA-everything/02-code/armor-games/apps/impossible/tools/prove.mjs
+# 2026-09-23: ALL LEVELS PASS — 5 tracks, 30/30 checkpoints spawn-safe+solvable
+
+node tools/ship-build.mjs --only impossible
+# 2026-09-23: impossible: 69 KB html
+
+# Browser file:// games/impossible/index.html?debug — zero console errors;
+# real-input drive (keyboard + pointer) as above; evidence
+# verification/evidence/p11-impossible-select.png
 ```
 
-## Known deferrals (to fill at ship)
+## Known deferrals
 
-- pending
+- No level editor (original PC full-game feature; out of v1 scope).
+- Input-offset calibration slider (proto feature) not carried over — desktop
+  timing is the canonical path per spec; coyote 0.10s / jump-buffer 0.06s
+  kept as modern-craft additions.
+- Audio ducking is a fixed 300ms envelope, not a separate gain chain.
 
-## Provenance (to fill at ship)
+## Provenance
 
-- pending
+Reference set: this checkpoint (apps/impossible, prototype card + html,
+divergence register D-33/34/35/60/61, MECHANICS-DIGEST §6 AudioSyncClock gap)
+and my own knowledge of the original. No web/GitHub searches for this
+repository, forks, or third-party remakes. Run: zai/glm-5.3 on omp; lane work
+by glm-5.3 subagents (routing corrected per operator directive before edits
+landed); integration fixes and verification by the session model.
