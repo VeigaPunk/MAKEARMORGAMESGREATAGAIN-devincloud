@@ -342,6 +342,16 @@ function overlay(title, sub) {
   ctx.font = '14px monospace'; ctx.fillStyle = COL.dim; ctx.fillText(sub, STAGE_W / 2, STAGE_H / 2 + 24);
 }
 function drawMenu() {
+  // zai edition signature: gold maemusubi (furoshiki knot)
+  (function knot(kx, ky, ks) {
+    ctx.save(); ctx.translate(kx, ky);
+    ctx.strokeStyle = '#e6b847'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.save(); ctx.rotate(-0.5); ctx.beginPath(); ctx.ellipse(-ks * 0.9, 0, ks * 0.72, ks * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.rotate(0.5); ctx.beginPath(); ctx.ellipse(ks * 0.9, 0, ks * 0.72, ks * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore();
+    ctx.fillStyle = '#e6b847'; ctx.strokeStyle = '#a97f1e'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(-ks * 0.42, -ks * 0.4, ks * 0.84, ks * 0.95, 3); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  })(STAGE_W - 96, 52, 13);
   ctx.fillStyle = COL.text; ctx.textAlign = 'center';
   ctx.font = 'bold 40px monospace'; ctx.fillText("THE WORLD'S HARDEST GAME", STAGE_W / 2, 60);
   ctx.font = '14px monospace'; ctx.fillStyle = COL.dim;

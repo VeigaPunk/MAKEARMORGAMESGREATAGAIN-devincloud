@@ -104,7 +104,19 @@ export class ShmupRenderer {
       this.titleTexts.push(t); this.menuLayer.addChild(t);
       return t;
     };
-    const titleText = mk(pack.title, 120, 44, pack.accent, true);
+    // zai edition signature: gold maemusubi (furoshiki knot) above the title
+    const knotC = new Container();
+    knotC.x = STAGE_W / 2; knotC.y = 62;
+    const knotLoop = (side: number): void => {
+      const g = new Graphics();
+      g.ellipse(side * 13, 0, 16, 9).stroke({ width: 5, color: 0xe6b847 });
+      g.rotation = side > 0 ? 0.5 : -0.5;
+      knotC.addChild(g);
+    };
+    knotLoop(-1); knotLoop(1);
+    knotC.addChild(new Graphics().roundRect(-6, -5, 12, 14, 3).fill(0xe6b847).stroke({ width: 1.5, color: 0xa97f1e }));
+    this.menuLayer.addChild(knotC);
+    const titleText = mk(pack.title, 128, 42, pack.accent, true);
     // cluck pack: authored wordmark replaces the text title when the asset
     // resolves (served from the app's public/art/; replica keeps text).
     if (pack.id === 'cluck') {
