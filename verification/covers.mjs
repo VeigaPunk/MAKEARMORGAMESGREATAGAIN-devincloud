@@ -51,7 +51,7 @@ const rect = () => c.eval(
 // filename → [game dir, input sequence to reach photogenic state]
 const SHOTS = [
   ['boxhead', async () => { await c.tapKey('Enter'); await sleep(500); await c.tapKey('Digit1'); await sleep(600); await c.tapKey('Digit1'); await sleep(4500); }],
-  ['impossible', async () => { await c.tapKey('Space'); await sleep(500); await c.tapKey('Space'); await sleep(1200); }],
+  ['impossible', async () => { await c.tapKey('Space'); await sleep(500); await c.tapKey('Enter'); await sleep(300); await c.tapKey('Space'); await sleep(2200); }],
   ['burger-tycoon', async () => { await sleep(1500); }],
   ['chicken-invaders', async () => { await c.tapKey('Enter'); await sleep(700); await c.keyDown('ArrowLeft'); await c.keyDown('Space'); await sleep(800); await c.keyUp('ArrowLeft'); await c.keyUp('Space'); }],
   ['chicken-invaders-original', async () => { await c.tapKey('Enter'); await sleep(700); await c.keyDown('ArrowRight'); await c.keyDown('Space'); await sleep(800); await c.keyUp('ArrowRight'); await c.keyUp('Space'); }],
