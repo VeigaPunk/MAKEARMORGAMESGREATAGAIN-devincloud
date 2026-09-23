@@ -113,5 +113,36 @@ Consulted: this working copy only — its files, its git history (`4f5cc41`,
 (ZCode CLI, its browser-use plugin/agent-browser daemon, Node.js installed
 via winget during the run). No web or GitHub searches were performed for
 this repository, its forks, or third-party remakes of the originals; no
-external game renditions were consulted. Nothing left the working copy: no
-push, no publish, no account creation, no uploads.
+external game renditions were consulted.
+
+During the goal run itself, nothing left the working copy: no push, no
+publish, no account creation, no uploads.
+
+**Post-run events (all operator-authorized, recorded for audit):**
+
+1. **Publication (2026-09-23):** the operator twice explicitly instructed
+   publication after being shown the rights-posture note in `DEPLOY.md`;
+   release 1.1 was published as MAGGA Edition 02 at
+   https://ds4cc.com/magga/zai-5.3max-zcode-vanilla/ via the
+   `ds4cc-marketplace` repo (`ec6e9cc`). The operator also instructed that
+   the game-source repository itself not be pushed at that time.
+2. **Cover re-authoring:** the operator flagged that the shipped covers
+   (inherited from the restored prior-ship lineage) were byte-identical to
+   the codex edition's despite different game builds. Per their direction —
+   distinct covers "reflecting the shipped game" in the Japanese wrapping
+   tradition — a **furoshiki cover set** + knot favicon were authored in
+   this working copy (`verification/r2/covers.html`, `drive-covers.mjs`)
+   and deployed (`86a2bba`). Deployed covers/favicon now hash-differ from
+   the codex edition on every checked file; game code was already
+   edition-own and unchanged.
+3. **In-game furoshiki identity pass:** hub stitched-hem cards, gold-knot
+   return badge, Boxhead knot-O wordmark (runtime art), gold maemusubi
+   above both shmup titles, Hardest menu knot (grid geometry untouched),
+   stitched hems/finials on the three DOM games. Additive visual changes
+   only; re-verified after rebuild (31/31 tests, 114/114 proofs, impossible
+   drive 3-course deathless, sweep zero errors, touch stick live). Deployed
+   as `ca6dfd3`.
+4. **Source push:** the operator instructed "push" (2026-09-23) and the
+   game-source repository was pushed to
+   github.com/VeigaPunk/MAKEARMORGAMESGREATAGAIN (`4d100bb..143cd4a`),
+   superseding item 1's temporary no-push instruction.
