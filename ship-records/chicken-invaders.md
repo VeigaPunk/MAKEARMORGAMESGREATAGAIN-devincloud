@@ -46,6 +46,13 @@ jokes between sectors, teal/orange palette distinct from replica.
   touch mode (`coarse=true` on a mouse click). Zones now claim touch
   pointers only (`pointerType === 'mouse'` gate). RMB missile verified
   firing after the fix (missiles 3→2, pointer.button=2 live).
+- **2026-09-23 Devin Cloud run (SWE-2 MAX):** malformed `chapter-unlocked`
+  saves (non-integer, negative, or > pack size) bypassed the clamp and
+  unlocked every chapter — `sim.ts` now clamps the loaded value to
+  `[1, chapters.length]`; shipped pages rebuilt. The stale zcode-lineage
+  `campaign.test.mjs` was rewritten for the grown packs (replica 10
+  chapters, cluck 3 sectors): 11/11 covering all waves/bosses both packs,
+  nova telegraph, malformed saves, gift cap, pause, extra life.
 
 **Organic real-input verification (shipped pages, file://):**
 - Replica: wave 1 spawned 10 chickens; arrows+Space cleared it → **wave 2
@@ -90,6 +97,10 @@ node tools/ship-build.mjs --only cluck-horizon       # 1912 KB html
 - No CI3 4-player co-op / overheat modifiers (out of CI2-era scope).
 - Bosses beyond chapter 2 not organically driven this run (lane-probed).
 - Firefox/real-device columns not driven this run.
+- 2026-09-23 Devin Cloud: the rewritten campaign suite's scripted pilot
+  plateaus at replica chapter 9 under the cheap strike driver — win path
+  remains sim-proven; organic late-campaign play stays a live-drive
+  deferral (suite asserts cluck full win, replica ≥ ch9).
 
 ## Provenance
 

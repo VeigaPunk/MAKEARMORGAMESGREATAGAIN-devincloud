@@ -88,6 +88,11 @@ node tools/ship-build.mjs --only burger-tycoon   # 81 KB html
 - Exact original numeric thresholds (dossiers mark them gaps; ours are
   tuned to the spec'd outcome envelope instead).
 - Endings driven by sim rather than live play this run.
+- 2026-09-23 Devin Cloud (SWE-2 MAX): `gameplay.test.mjs` burger
+  assertions modernized to this model (`s.over` string endings,
+  `totalBacklash` columns, startCash 950; idle→board-fired,
+  dirty→backlash/disease deltas). `tools/sim.mjs` verdicts unchanged:
+  CLEAN FIRED-BOARD Q11 · DIRTY-MAX SUSTAINED 3 scandals · MIXED SUSTAINED.
 
 ## Provenance
 

@@ -1,0 +1,16 @@
+{
+  "base": "http://127.0.0.1:4173",
+  "pages": {
+    "portal": {
+      "links": 7,
+      "errors": []
+    },
+    "boxhead": {},
+    "impossible": {},
+    "burger-tycoon": {},
+    "chicken-invaders": {},
+    "cluck-horizon": {},
+    "swords-and-sandals": {},
+    "hardest": {}
+  }
+}

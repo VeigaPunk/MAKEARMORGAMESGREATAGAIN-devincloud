@@ -134,7 +134,8 @@ export class ShmupSim {
 
   constructor(pack: ContentPack, private game: string) {
     this.pack = pack;
-    this.unlocked = load(game, 'chapter-unlocked', 1);
+    const rawUnlocked = load(game, 'chapter-unlocked', 1);
+    this.unlocked = Number.isInteger(rawUnlocked) && rawUnlocked >= 1 && rawUnlocked <= pack.chapters.length ? rawUnlocked : 1;
     this.high = load(game, 'highscore', 0);
     this.titleSel = Math.min(this.unlocked, pack.chapters.length);
     for (let i = 0; i < 90; i++) {

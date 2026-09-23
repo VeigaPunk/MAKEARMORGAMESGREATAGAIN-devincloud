@@ -146,3 +146,18 @@ publish, no account creation, no uploads.
    game-source repository was pushed to
    github.com/VeigaPunk/MAKEARMORGAMESGREATAGAIN (`4d100bb..143cd4a`),
    superseding item 1's temporary no-push instruction.
+
+---
+
+## Addendum — Devin Cloud re-verification, 2026-09-23 (SWE-2 MAX)
+
+This record's recorded `node --test` command now reports **tests 32,
+pass 32, fail 0**: the shmup `campaign.test.mjs` was fully rewritten and
+the burger assertions in `verification/tests/gameplay.test.mjs` were
+modernized — both had drifted from the evolved sources (grown packs,
+16-quarter Sim endings). One real defect fixed in
+`packages/shmup-core/src/sim.ts` (`chapter-unlocked` save now clamped to
+`[1, chapters.length]`; `games/` pages rebuilt). A new zero-dep CDP
+browser gate, `verification/browse.mjs`, re-verified portal + all 7
+shipped `games/` pages with real input — PASS, zero console errors.
+Details and run identity: `README.md` → "Re-verification run".
