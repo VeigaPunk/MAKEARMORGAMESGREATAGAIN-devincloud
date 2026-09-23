@@ -4,7 +4,7 @@
 > twice in-session after reading the rights note below): release 1.1 is
 > live at **https://ds4cc.com/magga/zai-5.3max-zcode-vanilla/** as
 > MAGGA Edition 02, published via `ds4cc-marketplace` commit `ec6e9cc`
-> (marketplace repo push only; the game-source repository was not pushed).
+> (marketplace repo push only; the game-source repository was not pushed; follow-up `86a2bba` deployed the authored furoshiki cover set + knot favicon after the operator flagged inherited covers identical to the codex edition).
 > Verified live: collection card, edition hub, game pages and release.json
 > all 200; the deployed Impossible game boots to its title screen in a real
 > browser (`verification/evidence/release-r2/80-deployed-collection.png`).
