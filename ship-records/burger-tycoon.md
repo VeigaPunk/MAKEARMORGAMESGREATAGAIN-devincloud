@@ -1,3 +1,25 @@
+pending
+
+## Verification commands + last results (to fill at ship)
+
+```bash
+# pending
+```
+
+## Known deferrals (to fill at ship)
+
+- pending
+
+## Provenance (to fill at ship)
+
+- pending
+
+---
+
+## Prior run of record — release 1.1 (zcode-vanilla substrate, shipped 2026-09-22)
+
+_Preserved verbatim from that run for continuity; the current run's verification above is the living head of this record._
+
 # Burger Tycoon — ship record (release 1.1, run of 2026-09-22)
 
 Original: Molleindustria's McDonald's Videogame (~2006), four-pane
@@ -53,3 +75,4 @@ Evidence: `verification/evidence/release-r2/30..33-*.png`, `70-burger-mobile.png
 Consulted only this working copy (files, git history, prior records) and the
 original game as remembered. No external renditions consulted; no web or
 GitHub searches about this project; nothing left the working copy.
+

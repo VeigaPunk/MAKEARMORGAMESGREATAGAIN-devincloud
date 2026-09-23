@@ -1,0 +1,683 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SANDALS OF STEEL: REIGN OF THE COLOSSUS</title><style>html,body{margin:0;height:100%;background:#17131b;color:#f7efd7;font:14px monospace}body{display:flex;justify-content:center}
+.mute{position:fixed;top:30px;right:8px;z-index:3;background:#29243a;color:#ffd166;border:1px solid #66547d;padding:7px}.app{width:min(960px,100%);padding-top:34px}.hud{display:flex;justify-content:space-between;padding:10px;background:#292437}.chrome{padding:8px;background:#211c2c}.stage{width:100%;height:min(58vh,520px);display:block;background:#30263f;image-rendering:auto}.log{height:92px;overflow:auto;padding:8px;background:#111;color:#9ff2ad}.actions{display:flex;gap:8px;padding:10px;background:#211c2c}.actions button,.chrome button{min-height:48px;flex:1;background:#6c4b35;color:#fff4d6;border:2px solid #bb8a52;font:inherit;border-radius:5px}.actions button:disabled{opacity:.45}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}h1{color:#ffd166}.portrait{width:96px;height:112px;border:2px solid #bb8a52;border-radius:5px;vertical-align:middle}.lookbtn{display:flex;flex-direction:column;align-items:center;gap:4px}.lookbtn img{width:48px;height:56px}small{opacity:.8}@media(max-width:600px){.stage{height:42vh}.actions{position:sticky;bottom:0}.actions button{font-size:12px}}</style></head><body><button id="mute" class="mute">SOUND ON</button><main class="app"><div id="hud" class="hud"></div><canvas id="stage" class="stage" width="800" height="420"></canvas><section id="chrome" class="chrome"></section><div id="actions" class="actions"></div><div id="log" class="log"></div></main><script>
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/input.ts
+  var KEYMAP_P1_VERSUS = {
+    KeyW: "up",
+    KeyS: "down",
+    KeyA: "left",
+    KeyD: "right",
+    Space: "fire",
+    Enter: "fire",
+    KeyE: "action",
+    KeyM: "action",
+    Digit1: "slot1",
+    Digit2: "slot2",
+    Digit3: "slot3",
+    Escape: "pause",
+    KeyP: "pause"
+  };
+  var KEYMAP_P1_SOLO = {
+    ...KEYMAP_P1_VERSUS,
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right"
+  };
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/scale.ts
+  function fitIntegerScale(stageW, stageH, vp, maxFactor = 4) {
+    const fit = Math.min(vp.width / stageW, vp.height / stageH);
+    if (fit < 1) return fit;
+    return Math.min(Math.floor(fit), maxFactor);
+  }
+  function letterboxOffset(stageW, stageH, scale, vp) {
+    return {
+      x: Math.floor((vp.width - stageW * scale) / 2),
+      y: Math.floor((vp.height - stageH * scale) / 2)
+    };
+  }
+  function viewport() {
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/storage.ts
+  var PREFIX = "maga:";
+  function save(game, key, value) {
+    try {
+      localStorage.setItem(PREFIX + game + ":" + key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function load(game, key, fallback) {
+    try {
+      const raw = localStorage.getItem(PREFIX + game + ":" + key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/sfx.ts
+  function semitone(n, shift) {
+    return n * Math.pow(2, shift / 12);
+  }
+  var _Sfx = class _Sfx {
+    constructor() {
+      __publicField(this, "ctx", null);
+      __publicField(this, "master", null);
+      __publicField(this, "musicGain", null);
+      __publicField(this, "sfxGain", null);
+      __publicField(this, "noiseBuf", null);
+      __publicField(this, "muted", false);
+      __publicField(this, "_volume", 0.5);
+      // --- music: lookahead chip sequencer ----------------------------------------
+      __publicField(this, "timer", null);
+      __publicField(this, "step", 0);
+      __publicField(this, "nextTime", 0);
+      __publicField(this, "song", null);
+    }
+    /** master volume 0..1 — live */
+    set volume(v) {
+      this._volume = Math.max(0, Math.min(1, v));
+      this.applyMaster();
+    }
+    get volume() {
+      return this._volume;
+    }
+    applyMaster() {
+      if (this.master && this.ctx) {
+        this.master.gain.setTargetAtTime(this.muted ? 0 : this._volume, this.ctx.currentTime, 0.02);
+      }
+    }
+    setMuted(m) {
+      this.muted = m;
+      this.applyMaster();
+    }
+    ensure() {
+      if (!this.ctx) {
+        try {
+          this.ctx = new AudioContext();
+          this.master = this.ctx.createGain();
+          this.master.connect(this.ctx.destination);
+          this.musicGain = this.ctx.createGain();
+          this.musicGain.gain.value = 0.9;
+          this.musicGain.connect(this.master);
+          this.sfxGain = this.ctx.createGain();
+          this.sfxGain.gain.value = 1;
+          this.sfxGain.connect(this.master);
+          this.applyMaster();
+        } catch {
+          return null;
+        }
+      }
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+      return this.ctx;
+    }
+    noise() {
+      const ctx2 = this.ensure();
+      if (!ctx2) return null;
+      if (!this.noiseBuf) {
+        const len = Math.floor(ctx2.sampleRate * 0.5);
+        this.noiseBuf = ctx2.createBuffer(1, len, ctx2.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      }
+      return this.noiseBuf;
+    }
+    /** short envelope blip — the atomic unit of retro sound */
+    blip(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      if (!ctx2 || !this.sfxGain) return;
+      const { wave = "square", freq = 440, freqEnd = freq, duration = 0.08, volume = 1 } = opts;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      osc.type = wave;
+      osc.frequency.setValueAtTime(Math.max(1, freq), t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t0 + duration);
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      osc.connect(gain).connect(this.sfxGain);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+    /** noise burst — hits, explosions, percussion (SFX side) */
+    burst(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      const buf = this.noise();
+      if (!ctx2 || !buf || !this.sfxGain) return;
+      const { duration = 0.15, volume = 0.6, lp = 0, hp = 0 } = opts;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      let node = src;
+      if (lp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = lp;
+        node.connect(f);
+        node = f;
+      }
+      if (hp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "highpass";
+        f.frequency.value = hp;
+        node.connect(f);
+        node = f;
+      }
+      node.connect(gain).connect(this.sfxGain);
+      src.start(t0);
+      src.stop(t0 + duration + 0.02);
+    }
+    /** named presets; games may add their own via registerPreset */
+    preset(name) {
+      const custom = _Sfx.customPresets[name];
+      if (custom) {
+        custom(this);
+        return;
+      }
+      switch (name) {
+        case "shoot":
+          this.blip({ wave: "square", freq: 880, freqEnd: 220, duration: 0.07 });
+          break;
+        case "hit":
+          this.blip({ wave: "sawtooth", freq: 200, freqEnd: 60, duration: 0.12 });
+          break;
+        case "pickup":
+          this.blip({ wave: "triangle", freq: 660, freqEnd: 1320, duration: 0.09 });
+          break;
+        case "death":
+          this.blip({ wave: "sawtooth", freq: 320, freqEnd: 40, duration: 0.4, volume: 0.8 });
+          break;
+        case "ui":
+          this.blip({ wave: "square", freq: 520, freqEnd: 700, duration: 0.05, volume: 0.6 });
+          break;
+        case "explode":
+          this.burst({ duration: 0.5, volume: 0.7, lp: 900 });
+          this.blip({ wave: "sawtooth", freq: 120, freqEnd: 30, duration: 0.4, volume: 0.7 });
+          break;
+        case "missile":
+          this.burst({ duration: 0.3, volume: 0.4, hp: 800 });
+          this.blip({ wave: "sawtooth", freq: 300, freqEnd: 900, duration: 0.25, volume: 0.4 });
+          break;
+      }
+    }
+    static registerPreset(name, fn) {
+      _Sfx.customPresets[name] = fn;
+    }
+    /**
+     * Legacy single-voice API (kept for existing callers): wraps the notes in a
+     * one-track Song. `stepMs` is the per-note interval.
+     */
+    startMusic(notes, stepMs = 140, opts = {}) {
+      this.playSong({ stepMs, tracks: [{ wave: opts.wave ?? "triangle", notes, gain: 0.3 }] });
+    }
+    /** Start a looping multi-voice song. Replaces any current song. */
+    playSong(song) {
+      this.stopMusic();
+      this.song = song;
+      this.step = 0;
+      const ctx2 = this.ensure();
+      if (!ctx2) return;
+      this.nextTime = ctx2.currentTime + 0.06;
+      this.timer = window.setInterval(() => this.pump(), 25);
+      this.pump();
+    }
+    stopMusic() {
+      if (this.timer !== null) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      this.song = null;
+    }
+    get musicPlaying() {
+      return this.song !== null;
+    }
+    /** schedule ahead ~120ms; skipped while the context is suspended (no gesture yet) */
+    pump() {
+      const ctx2 = this.ctx;
+      const song = this.song;
+      if (!ctx2 || !song || !this.musicGain) return;
+      if (ctx2.state !== "running") return;
+      const horizon = ctx2.currentTime + 0.12;
+      while (this.nextTime < horizon) {
+        this.scheduleStep(song, this.step, this.nextTime);
+        this.step += 1;
+        this.nextTime += song.stepMs / 1e3;
+      }
+    }
+    scheduleStep(song, step, t) {
+      const ctx2 = this.ctx;
+      const len = song.tracks.reduce((m, tr) => Math.max(m, tr.notes.length), song.drums ? song.drums.steps.length : 0);
+      if (len === 0) return;
+      const s = step % len;
+      for (const tr of song.tracks) {
+        const f0 = tr.notes[s % tr.notes.length];
+        if (!f0) continue;
+        const freq = semitone(f0, tr.shift ?? 0);
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = tr.wave;
+        osc.frequency.setValueAtTime(freq, t);
+        const dur = song.stepMs / 1e3 * (tr.gate ?? 0.9);
+        const g2 = tr.gain ?? 0.22;
+        gain.gain.setValueAtTime(1e-4, t);
+        gain.gain.linearRampToValueAtTime(g2, t + 8e-3);
+        gain.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+        let node = osc;
+        if (tr.lp) {
+          const f = ctx2.createBiquadFilter();
+          f.type = "lowpass";
+          f.frequency.value = tr.lp;
+          node.connect(f);
+          node = f;
+        }
+        node.connect(gain).connect(this.musicGain);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      }
+      if (song.drums) {
+        const ch = song.drums.steps[s % song.drums.steps.length];
+        const dg = song.drums.gain ?? 0.5;
+        if (ch === "k") this.drumKick(t, dg);
+        else if (ch === "s") this.drumSnare(t, dg * 0.7);
+        else if (ch === "h") this.drumHat(t, dg * 0.35);
+      }
+    }
+    drumKick(t, g2) {
+      const ctx2 = this.ctx;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      gain.gain.setValueAtTime(g2, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.13);
+      osc.connect(gain).connect(this.musicGain);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+    drumSnare(t, g2) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 1800;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g2, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.09);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.1);
+    }
+    drumHat(t, g2) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 7e3;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g2, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.035);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.05);
+    }
+  };
+  __publicField(_Sfx, "customPresets", {});
+  var Sfx = _Sfx;
+
+  // MAGA-everything/02-code/armor-games/apps/swords-and-sandals/src/main.ts
+  var STATS = ["strength", "agility", "vitality", "defense"];
+  var opponents = [{ name: "Tin Can Tim", hp: 34, strength: 6, defense: 2 }, { name: "Baron Bonk", hp: 48, strength: 8, defense: 4 }, { name: "The Sand Snorter", hp: 62, strength: 10, defense: 5 }, { name: "Emperor\u2019s Champion", hp: 78, strength: 12, defense: 7 }];
+  var items = [{ name: "Bent Bronze Sword", kind: "weapon", price: 22, gate: 1, bonus: 2 }, { name: "Lucky Sandals", kind: "armor", price: 38, gate: 2, bonus: 3 }, { name: "Imperial Buckler", kind: "armor", price: 65, gate: 2, bonus: 5 }];
+  var stage = document.querySelector("#stage");
+  var ctx = stage.getContext("2d");
+  var hud = document.querySelector("#hud");
+  var chrome = document.querySelector("#chrome");
+  var actions = document.querySelector("#actions");
+  var logEl = document.querySelector("#log");
+  var sfx = new Sfx();
+  function validSave(s) {
+    const g2 = s?.gladiator;
+    return !!g2 && Number.isInteger(s.defeated) && s.defeated >= 0 && s.defeated <= opponents.length && typeof g2.name === "string" && typeof g2.look === "string" && ["strength", "agility", "vitality", "defense"].every((k) => typeof g2.stats?.[k] === "number") && ["hp", "maxHp", "gold", "xp", "level", "weapon", "armor", "potions"].every((k) => typeof g2[k] === "number") && (s.owned === void 0 || Array.isArray(s.owned) && s.owned.every((x) => typeof x === "string"));
+  }
+  var selectedLook = "Scarlet";
+  var logLines = ["Welcome, challenger."];
+  var opponent = null;
+  var turn = 0;
+  var guarded = false;
+  var rawSave = load("swords-and-sandals", "slot", null);
+  var saveData = validSave(rawSave) ? rawSave : null;
+  var defeated = saveData?.defeated ?? 0;
+  var owned = saveData?.owned ?? [];
+  var mode = saveData ? defeated >= opponents.length ? "complete" : "hub" : "create";
+  var points = saveData ? 0 : 6;
+  var g = saveData?.gladiator ?? { name: "", look: selectedLook, stats: { strength: 2, agility: 2, vitality: 2, defense: 2 }, hp: 30, maxHp: 30, gold: 0, xp: 0, level: 1, weapon: 0, armor: 0, potions: 2 };
+  function log(s) {
+    logLines = [s, ...logLines].slice(0, 8);
+    logEl.innerHTML = logLines.map((x) => `<div>${x}</div>`).join("");
+  }
+  function persist() {
+    save("swords-and-sandals", "slot", { gladiator: g, defeated, owned });
+  }
+  function level() {
+    g.level = 1 + Math.floor(g.xp / 40);
+  }
+  function render() {
+    hud.innerHTML = `<span>${mode.toUpperCase()} \xB7 ${g.name || "Unnamed gladiator"}</span><span>HP ${g.hp}/${g.maxHp} \xB7 Gold ${g.gold} \xB7 XP ${g.xp} \xB7 Lv ${g.level}</span>`;
+    chrome.innerHTML = "";
+    actions.innerHTML = "";
+    if (mode === "create") renderCreate();
+    else if (mode === "hub") renderHub();
+    else if (mode === "arena") renderArena();
+    else if (mode === "shop") renderShop();
+    else {
+      chrome.innerHTML = "<h1>V1 COMPLETE</h1><p>The short arena ladder is conquered. Your save remains safe.</p>";
+      addButton("Return to Hub", () => {
+        mode = "hub";
+        render();
+      });
+    }
+    draw();
+  }
+  function addButton(text, fn, disabled = false) {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.disabled = disabled;
+    b.onclick = () => {
+      sfx.preset("ui");
+      fn();
+    };
+    actions.appendChild(b);
+  }
+  function renderCreate() {
+    chrome.innerHTML = `<h1>Create Gladiator</h1><p>Look preset: <b>${selectedLook}</b> <img class="portrait" src="portrait-${selectedLook.toLowerCase()}.svg" alt="${selectedLook} gladiator portrait"></p><div class="grid">${["Scarlet", "Azure", "Gold"].map((x) => `<button class="lookbtn" data-look="${x}"><img src="portrait-${x.toLowerCase()}.svg" alt="">${x}</button>`).join("")}</div><p>Skill points remaining: <b>${points}</b></p><div class="grid">${STATS.map((k) => `<button data-stat="${k}">${k}: ${g.stats[k]} +</button>`).join("")}</div><input id="name" placeholder="Gladiator name">`;
+    const nameInput = chrome.querySelector("#name");
+    nameInput.value = g.name;
+    chrome.querySelectorAll("[data-look]").forEach((b) => b.onclick = () => {
+      selectedLook = b.dataset.look;
+      g.look = selectedLook;
+      render();
+    });
+    chrome.querySelectorAll("[data-stat]").forEach((b) => b.onclick = () => {
+      const k = b.dataset.stat;
+      if (points) {
+        g.stats[k]++;
+        points--;
+        g.maxHp = 24 + g.stats.vitality * 4;
+        g.hp = g.maxHp;
+        render();
+      }
+    });
+    addButton("Enter the Arena", () => {
+      g.name = (nameInput.value || "Unnamed Gladiator").slice(0, 24);
+      g.maxHp = 24 + g.stats.vitality * 4;
+      g.hp = g.maxHp;
+      mode = "hub";
+      persist();
+      render();
+    }, points > 0);
+  }
+  function renderHub() {
+    chrome.innerHTML = `<h1>Hub \u2014 ${g.look}</h1><p class="gladiator-name"></p><p><img class="portrait" src="portrait-${g.look.toLowerCase()}.svg" alt="${g.look} gladiator portrait"></p><p>INTERNAL watermark: native replica slice. Prepare for the next bout.</p><p>Weapon +${g.weapon} \xB7 Armor +${g.armor} \xB7 Potions ${g.potions}</p>`;
+    chrome.querySelector(".gladiator-name").textContent = g.name;
+    if (defeated < opponents.length) addButton(defeated ? "Next Opponent" : "Start First Bout", startFight);
+    addButton("Visit Smithy / Armory", () => {
+      mode = "shop";
+      render();
+    });
+  }
+  function renderArena() {
+    if (!opponent) return;
+    chrome.innerHTML = `<h1>Arena: ${opponent.name}</h1><p>Opponent HP ${opponent.hp}/${opponent.maxHp} \xB7 ${guarded ? "Opponent is off-balance." : ""}</p>`;
+    addButton("Attack", () => act("attack"));
+    addButton("Special", () => act("special"));
+    addButton(`Potion (${g.potions})`, () => act("potion"), g.potions < 1 || g.hp === g.maxHp);
+    addButton("End Turn", () => enemyTurn());
+  }
+  function renderShop() {
+    chrome.innerHTML = '<h1>Smithy / Armory</h1><p>Buy one item, then return to the arena.</p><div class="grid">' + items.map((it, i) => {
+      const isOwned = owned.includes(it.name);
+      return `<button data-item="${i}" ${isOwned || g.level < it.gate || g.gold < it.price ? "disabled" : ""}>${it.name}<br>${isOwned ? "Owned" : `${it.price} gold \xB7 level ${it.gate}`}</button>`;
+    }).join("") + "</div>";
+    chrome.querySelectorAll("[data-item]").forEach((b) => b.onclick = () => {
+      const it = items[Number(b.dataset.item)];
+      if (owned.includes(it.name)) return;
+      g.gold -= it.price;
+      owned.push(it.name);
+      if (it.kind === "weapon") g.weapon = Math.max(g.weapon, it.bonus);
+      else g.armor = Math.max(g.armor, it.bonus);
+      persist();
+      log(`Bought ${it.name}. The smith nods solemnly.`);
+      render();
+    });
+    addButton("Back to Hub", () => {
+      mode = "hub";
+      render();
+    });
+  }
+  function startFight() {
+    const o = opponents[Math.min(defeated, opponents.length - 1)];
+    opponent = { ...o, maxHp: o.hp };
+    turn = 0;
+    guarded = false;
+    mode = "arena";
+    log(`The crowd chants for ${o.name}.`);
+    render();
+  }
+  function act(kind) {
+    if (!opponent) return;
+    if (kind === "potion") {
+      g.potions--;
+      g.hp = Math.min(g.maxHp, g.hp + 12);
+      log("Potion consumed. It tastes like heroic fruit.");
+      enemyTurn();
+      return;
+    }
+    turn++;
+    const bonus = g.weapon;
+    const chance = 0.55 + g.stats.agility * 0.04;
+    const hit = Math.random() < chance;
+    if (!hit) {
+      log("Miss! Your sword demonstrates interpretive dance.");
+      enemyTurn();
+      return;
+    }
+    const crit = Math.random() < 0.08 + g.stats.agility * 0.01;
+    let damage = (kind === "special" ? 7 : 4) + g.stats.strength + bonus + (crit ? 5 : 0);
+    damage = Math.max(1, damage - opponent.defense);
+    opponent.hp = Math.max(0, opponent.hp - damage);
+    guarded = kind === "special";
+    sfx.preset(crit ? "hit" : "shoot");
+    log(`${crit ? "Critical bonk! " : "Hit! "}${opponent.name} takes ${damage}.`);
+    if (opponent.hp === 0) {
+      win();
+      return;
+    }
+    enemyTurn();
+  }
+  function enemyTurn() {
+    if (!opponent) return;
+    const damage = Math.max(1, opponent.strength + Math.floor(Math.random() * 3) - g.stats.defense - Math.floor(g.armor / 2) - (guarded ? 3 : 0));
+    guarded = false;
+    g.hp = Math.max(0, g.hp - damage);
+    log(`${opponent.name} replies with a theatrical thump for ${damage}.`);
+    if (g.hp === 0) {
+      log("Defeat! The healer drags you back to the hub.");
+      g.hp = g.maxHp;
+      mode = "hub";
+      persist();
+    }
+    render();
+  }
+  function win() {
+    if (!opponent) return;
+    const reward = 18 + defeated * 8;
+    g.gold += reward;
+    g.xp += 22;
+    level();
+    defeated++;
+    log(`Victory! Earned ${reward} gold and XP.`);
+    g.hp = g.maxHp;
+    persist();
+    sfx.preset("pickup");
+    mode = defeated >= opponents.length ? "complete" : "hub";
+    render();
+  }
+  function draw() {
+    const vp = viewport();
+    const scale = fitIntegerScale(800, 420, vp);
+    const off = letterboxOffset(800, 420, scale, vp);
+    void scale;
+    void off;
+    ctx.clearRect(0, 0, 800, 420);
+    ctx.fillStyle = "#4a2033";
+    ctx.fillRect(0, 0, 800, 60);
+    ctx.fillStyle = "#6e2f33";
+    ctx.fillRect(0, 60, 800, 55);
+    ctx.fillStyle = "#a8542f";
+    ctx.fillRect(0, 115, 800, 45);
+    ctx.fillStyle = "#d98e4a";
+    ctx.fillRect(0, 160, 800, 30);
+    ctx.fillStyle = "#ffcf6e";
+    ctx.beginPath();
+    ctx.arc(660, 150, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffe3a1";
+    ctx.beginPath();
+    ctx.arc(660, 150, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#6e4a2f";
+    ctx.fillRect(0, 92, 800, 86);
+    ctx.fillStyle = "#8a5f38";
+    ctx.fillRect(0, 92, 800, 6);
+    for (let x = 16; x < 800; x += 64) {
+      ctx.fillStyle = "#2a1420";
+      ctx.fillRect(x, 118, 32, 60);
+      ctx.beginPath();
+      ctx.arc(x + 16, 118, 16, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = "#9c6c40";
+      ctx.fillRect(x - 4, 112, 4, 66);
+      ctx.fillRect(x + 32, 112, 4, 66);
+    }
+    ctx.fillStyle = "#54371f";
+    ctx.fillRect(0, 178, 800, 12);
+    for (let row = 0; row < 2; row++) {
+      const y = 196 + row * 16;
+      for (let i = 0; i < 50; i++) {
+        const x = 8 + i * 16 + row % 2 * 8;
+        ctx.fillStyle = (i * 7 + row * 3) % 9 === 0 ? "#e8a34e" : "#2a1622";
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(x - 5, y, 10, 7);
+      }
+    }
+    ctx.fillStyle = "#54371f";
+    ctx.fillRect(0, 222, 800, 14);
+    ctx.fillStyle = "#d9a45f";
+    ctx.fillRect(0, 236, 800, 184);
+    ctx.fillStyle = "#c68d48";
+    ctx.fillRect(0, 236, 800, 10);
+    ctx.fillRect(0, 290, 800, 8);
+    ctx.fillRect(0, 350, 800, 12);
+    for (let i = 0; i < 90; i++) {
+      const x = (i * 89 + 37) % 800;
+      const y = 248 + i * 53 % 165;
+      ctx.fillStyle = i % 3 ? "#b57a3c" : "#e8bd7d";
+      ctx.fillRect(x, y, 3, 2);
+    }
+    ctx.font = "bold 34px monospace";
+    ctx.fillStyle = "#3a1420";
+    ctx.fillText("SWORDS & SANDALS", 26, 52);
+    ctx.fillStyle = "#ffd166";
+    ctx.fillText("SWORDS & SANDALS", 24, 50);
+    ctx.font = "14px monospace";
+    ctx.fillStyle = "#f3d9c0";
+    ctx.fillText("native replica", 26, 72);
+    if (mode === "arena") {
+      ctx.font = "bold 16px monospace";
+      ctx.fillStyle = "#3a1420";
+      ctx.fillText("ARENA OF BONKS", 27, 93);
+      ctx.fillStyle = "#ffb3b3";
+      ctx.fillText("ARENA OF BONKS", 26, 92);
+    }
+    const lookColor = g.look === "Azure" ? "#3f8ce0" : g.look === "Gold" ? "#e6b83c" : "#d43a3a";
+    ctx.fillStyle = "#a8763c";
+    ctx.beginPath();
+    ctx.ellipse(230, 286, 64, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(570, 286, 64, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = lookColor;
+    ctx.beginPath();
+    ctx.arc(230, 220, 55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#60a5fa";
+    ctx.beginPath();
+    ctx.arc(570, 220, 55, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#2a1420";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(230, 220, 55, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(570, 220, 55, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  document.querySelector("#mute").onclick = () => {
+    sfx.muted = !sfx.muted;
+    document.querySelector("#mute").textContent = sfx.muted ? "SOUND OFF" : "SOUND ON";
+  };
+  if (location.search.includes("debug")) {
+    window.__maga = { get mode() {
+      return mode;
+    }, get screen() {
+      return mode;
+    }, get gladiatorStats() {
+      return { ...g.stats };
+    }, get hp() {
+      return g.hp;
+    }, get gold() {
+      return g.gold;
+    }, get xp() {
+      return g.xp;
+    }, get level() {
+      return g.level;
+    }, get opponent() {
+      return defeated;
+    }, get opponentHp() {
+      return opponent?.hp ?? 0;
+    }, get shop() {
+      return items.map((x) => ({ ...x }));
+    }, get savePresent() {
+      return load("swords-and-sandals", "slot", null) !== null;
+    } };
+  }
+  render();
+})();
+
+</script>
+</body></html>

@@ -6,4 +6,6 @@ import { PACKS, bootShmup } from '@maga/shmup-core';
  * @maga/shmup-core (ported from prototypes/chicken-invaders.html).
  * INTERNAL-NO-PUBLIC: InterAction studios / Prouskas clearance required to ship.
  */
-await bootShmup(PACKS.replica, 'chicken-invaders');
+void (async () => {
+  await bootShmup(PACKS.replica, 'chicken-invaders');
+})();

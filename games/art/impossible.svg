@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1408 704" width="1408" height="704">
+  <!-- Impossible Run key art — hand-authored SVG. Graded-minimalism runner:
+       orange cube mid-jump over a spike row, abyss pits, ghost of past runs. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a0e2e"/><stop offset="55%" stop-color="#43214d"/><stop offset="100%" stop-color="#7a3b58"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#241436"/><stop offset="100%" stop-color="#120a1e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1408" height="704" fill="url(#sky)"/>
+  <!-- faint obstacle memory ghosts -->
+  <g opacity=".25">
+    <rect x="120" y="560" width="24" height="40" fill="#3a2050"/>
+    <rect x="220" y="560" width="24" height="40" fill="#3a2050"/>
+    <rect x="330" y="560" width="24" height="40" fill="#3a2050"/>
+    <rect x="1030" y="560" width="24" height="40" fill="#3a2050"/>
+    <rect x="1140" y="560" width="24" height="40" fill="#3a2050"/>
+  </g>
+  <!-- ground with two abyss gaps -->
+  <g fill="url(#ground)">
+    <rect x="0" y="600" width="520" height="104"/>
+    <rect x="640" y="600" width="430" height="104"/>
+    <rect x="1170" y="600" width="238" height="104"/>
+  </g>
+  <!-- ground top edge -->
+  <g fill="#5e2a6e">
+    <rect x="0" y="592" width="520" height="10"/>
+    <rect x="640" y="592" width="430" height="10"/>
+    <rect x="1170" y="592" width="238" height="10"/>
+  </g>
+  <!-- abyss glow -->
+  <g fill="#0a0512"><rect x="520" y="620" width="120" height="84"/><rect x="1070" y="620" width="100" height="84"/></g>
+  <!-- spike row before the first gap -->
+  <g fill="#2b1544" stroke="#170b28" stroke-width="3">
+    <path d="M430 600 L444 556 L458 600 Z"/><path d="M470 600 L484 556 L498 600 Z"/>
+    <path d="M930 600 L944 556 L958 600 Z"/>
+  </g>
+  <!-- floating block island -->
+  <g><rect x="760" y="470" width="120" height="34" fill="#31205a" stroke="#1c1240" stroke-width="4"/></g>
+  <!-- hero cube mid-air over the first gap, trail behind -->
+  <g>
+    <rect x="560" y="512" width="34" height="34" fill="#ff9f2e" opacity=".28"/>
+    <rect x="516" y="536" width="34" height="34" fill="#ff9f2e" opacity=".45"/>
+    <rect x="472" y="560" width="34" height="34" fill="#ff9f2e" opacity=".6"/>
+    <rect x="600" y="472" width="44" height="44" fill="#ffb02e" stroke="#c2410c" stroke-width="4"/>
+    <rect x="600" y="472" width="44" height="44" fill="#ffd06e" opacity=".35"/>
+  </g>
+  <!-- jump spark -->
+  <g stroke="#ffd06e" stroke-width="3" opacity=".9">
+    <path d="M596 522 L588 510"/><path d="M648 522 L656 510"/><path d="M622 462 L622 450"/>
+  </g>
+  <!-- progress ticks along the top -->
+  <g fill="#ffb02e" opacity=".8">
+    <rect x="120" y="80" width="14" height="14"/><rect x="320" y="80" width="14" height="14"/><rect x="520" y="80" width="14" height="14"/>
+    <rect x="720" y="80" width="14" height="14" fill="#5e2a6e"/><rect x="920" y="80" width="14" height="14" fill="#5e2a6e"/><rect x="1120" y="80" width="14" height="14" fill="#5e2a6e"/>
+  </g>
+  <rect width="1408" height="704" fill="none" stroke="#000" stroke-width="40" opacity=".35"/>
+</svg>

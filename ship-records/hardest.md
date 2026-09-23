@@ -1,3 +1,11 @@
+
+
+---
+
+## Prior run of record — release 1.1 (zcode-vanilla substrate, shipped 2026-09-22)
+
+_Preserved verbatim from that run for continuity; the current run's verification above is the living head of this record._
+
 # The World's Hardest Game — ship record (release 1.1, run of 2026-09-22)
 
 Original: precision dodge-and-collect mazes; the checkpoint's near-complete
@@ -58,3 +66,4 @@ Evidence: `verification/evidence/release-r2/60..66-*.png`, `hardest-drive.log.js
 Consulted only this working copy (files, git history, prior records) and the
 original game as remembered. No external renditions consulted; no web or
 GitHub searches about this project; nothing left the working copy.
+

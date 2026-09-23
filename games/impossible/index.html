@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>IMPOSSIBLE RUN</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #111; height: 100%; overflow: hidden; }
+  canvas { position: fixed; left: 0; top: 0; touch-action: none; image-rendering: pixelated; }
+.mute {
+    position: fixed; top: 26px; right: 8px; z-index: 10;
+    background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
+    font: 11px/1 monospace; padding: 4px 8px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<button id="mute" class="mute" type="button">SOUND ON</button>
+<script>
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/input.ts
+  var KEYMAP_P1_VERSUS = {
+    KeyW: "up",
+    KeyS: "down",
+    KeyA: "left",
+    KeyD: "right",
+    Space: "fire",
+    Enter: "fire",
+    KeyE: "action",
+    KeyM: "action",
+    Digit1: "slot1",
+    Digit2: "slot2",
+    Digit3: "slot3",
+    Escape: "pause",
+    KeyP: "pause"
+  };
+  var KEYMAP_P1_SOLO = {
+    ...KEYMAP_P1_VERSUS,
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right"
+  };
+  var KEYMAP_P2 = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    Numpad8: "fireUp",
+    Numpad4: "fireLeft",
+    Numpad5: "fireDown",
+    Numpad6: "fireRight",
+    KeyI: "fireUp",
+    KeyJ: "fireLeft",
+    KeyK: "fireDown",
+    KeyL: "fireRight"
+  };
+  var Input = class {
+    constructor() {
+      __publicField(this, "p1", { down: /* @__PURE__ */ new Set(), pressed: /* @__PURE__ */ new Set() });
+      __publicField(this, "p2", { down: /* @__PURE__ */ new Set(), pressed: /* @__PURE__ */ new Set() });
+      __publicField(this, "mode", "solo");
+      __publicField(this, "overrides", {});
+      __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
+      __publicField(this, "map2", { ...KEYMAP_P2 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+    }
+    /** switch keyboard ownership: solo = P1 gets everything; versus = split */
+    setMode(mode) {
+      this.mode = mode;
+      this.rebuild();
+    }
+    rebuild() {
+      const base1 = this.mode === "solo" ? KEYMAP_P1_SOLO : KEYMAP_P1_VERSUS;
+      this.map1 = { ...base1, ...this.overrides.p1 };
+      this.map2 = { ...KEYMAP_P2, ...this.overrides.p2 };
+    }
+    /** attach to the canvas (or window) that receives events */
+    attach(canvas, toLogical2) {
+      window.addEventListener("keydown", (e) => {
+        const t = e.target;
+        const editable = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+        const a1 = this.map1[e.code];
+        const a2 = this.map2[e.code];
+        if (a1 === void 0 && a2 === void 0) return;
+        if (editable) return;
+        e.preventDefault();
+        if (a1 !== void 0) {
+          if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
+          this.p1.down.add(a1);
+        }
+        if (a2 !== void 0) {
+          if (!this.p2.down.has(a2)) this.p2.pressed.add(a2);
+          this.p2.down.add(a2);
+        }
+      });
+      window.addEventListener("keyup", (e) => {
+        const a1 = this.map1[e.code];
+        const a2 = this.map2[e.code];
+        if (a1) this.p1.down.delete(a1);
+        if (a2) this.p2.down.delete(a2);
+      });
+      const toLocal = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return toLogical2(e.clientX - r.left, e.clientY - r.top);
+      };
+      canvas.style.touchAction = "none";
+      canvas.addEventListener("pointerdown", (e) => {
+        const p = toLocal(e);
+        this.pointer.active = true;
+        this.pointer.seen = true;
+        this.pointer.button = e.button;
+        this.pointer.x = p.x;
+        this.pointer.y = p.y;
+        this.pointer.tapped = false;
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {
+        }
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        const p = toLocal(e);
+        this.pointer.seen = true;
+        this.pointer.x = p.x;
+        this.pointer.y = p.y;
+      });
+      const release = () => {
+        if (!this.pointer.active) return;
+        this.pointer.active = false;
+        this.pointer.button = -1;
+        this.pointer.tapped = true;
+      };
+      canvas.addEventListener("pointerup", release);
+      canvas.addEventListener("pointercancel", release);
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
+      const clearKeys = () => {
+        this.p1.down.clear();
+        this.p2.down.clear();
+        this.pointer.active = false;
+        this.pointer.button = -1;
+      };
+      window.addEventListener("blur", clearKeys);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) clearKeys();
+      });
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+    // --- P1 (backward-compatible API) -------------------------------------------
+    isDown(a) {
+      return this.p1.down.has(a);
+    }
+    /** true only on the frame the action went down */
+    wasPressed(a) {
+      return this.p1.pressed.has(a);
+    }
+    /** 8-way movement vector from keys or pointer drag, normalized.
+     *  `pointerDrag=false` disables the drag fallback — touch games with a
+     *  virtual stick pass false so field taps never move the player (D-15). */
+    moveAxis(centerX, centerY, dragRadius, pointerDrag = true) {
+      let x = (this.isDown("right") ? 1 : 0) - (this.isDown("left") ? 1 : 0);
+      let y = (this.isDown("down") ? 1 : 0) - (this.isDown("up") ? 1 : 0);
+      if (x === 0 && y === 0 && pointerDrag && this.pointer.active) {
+        const dx = this.pointer.x - centerX;
+        const dy = this.pointer.y - centerY;
+        const d = Math.hypot(dx, dy);
+        if (d > dragRadius * 0.25) {
+          x = dx / d;
+          y = dy / d;
+        }
+      }
+      return { x, y };
+    }
+    // --- P2 (versus mode) ---------------------------------------------------------
+    isDown2(a) {
+      return this.p2.down.has(a);
+    }
+    wasPressed2(a) {
+      return this.p2.pressed.has(a);
+    }
+    /** P2 movement from the arrow-key cluster (no pointer fallback) */
+    moveAxis2() {
+      return {
+        x: (this.isDown2("right") ? 1 : 0) - (this.isDown2("left") ? 1 : 0),
+        y: (this.isDown2("down") ? 1 : 0) - (this.isDown2("up") ? 1 : 0)
+      };
+    }
+    /**
+     * P2 directional fire vector from the shoot cluster. Null when no shoot key
+     * is held — games should only fire while a direction is held (facing-fire).
+     */
+    fireAxis2() {
+      const x = (this.isDown2("fireRight") ? 1 : 0) - (this.isDown2("fireLeft") ? 1 : 0);
+      const y = (this.isDown2("fireDown") ? 1 : 0) - (this.isDown2("fireUp") ? 1 : 0);
+      if (x === 0 && y === 0) return null;
+      const d = Math.hypot(x, y);
+      return { x: x / d, y: y / d };
+    }
+    // --- rebind (BH-2.5) ----------------------------------------------------------
+    /** Persist/load-friendly: replace keymaps on top of mode defaults. */
+    setKeymaps(maps) {
+      this.overrides = { ...this.overrides, ...maps };
+      this.rebuild();
+    }
+    /** current effective keymaps (for rebind UI / persistence) */
+    getKeymaps() {
+      return { p1: { ...this.map1 }, p2: { ...this.map2 } };
+    }
+    /** call at end of every frame */
+    endFrame() {
+      this.p1.pressed.clear();
+      this.p2.pressed.clear();
+      this.pointer.tapped = false;
+    }
+  };
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/scale.ts
+  function fitIntegerScale(stageW, stageH, vp, maxFactor = 4) {
+    const fit = Math.min(vp.width / stageW, vp.height / stageH);
+    if (fit < 1) return fit;
+    return Math.min(Math.floor(fit), maxFactor);
+  }
+  function letterboxOffset(stageW, stageH, scale, vp) {
+    return {
+      x: Math.floor((vp.width - stageW * scale) / 2),
+      y: Math.floor((vp.height - stageH * scale) / 2)
+    };
+  }
+  function viewport() {
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/storage.ts
+  var PREFIX = "maga:";
+  function save(game, key, value) {
+    try {
+      localStorage.setItem(PREFIX + game + ":" + key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function load(game, key, fallback) {
+    try {
+      const raw = localStorage.getItem(PREFIX + game + ":" + key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/sfx.ts
+  function semitone(n, shift) {
+    return n * Math.pow(2, shift / 12);
+  }
+  var _Sfx = class _Sfx {
+    constructor() {
+      __publicField(this, "ctx", null);
+      __publicField(this, "master", null);
+      __publicField(this, "musicGain", null);
+      __publicField(this, "sfxGain", null);
+      __publicField(this, "noiseBuf", null);
+      __publicField(this, "muted", false);
+      __publicField(this, "_volume", 0.5);
+      // --- music: lookahead chip sequencer ----------------------------------------
+      __publicField(this, "timer", null);
+      __publicField(this, "step", 0);
+      __publicField(this, "nextTime", 0);
+      __publicField(this, "song", null);
+    }
+    /** master volume 0..1 — live */
+    set volume(v) {
+      this._volume = Math.max(0, Math.min(1, v));
+      this.applyMaster();
+    }
+    get volume() {
+      return this._volume;
+    }
+    applyMaster() {
+      if (this.master && this.ctx) {
+        this.master.gain.setTargetAtTime(this.muted ? 0 : this._volume, this.ctx.currentTime, 0.02);
+      }
+    }
+    setMuted(m) {
+      this.muted = m;
+      this.applyMaster();
+    }
+    ensure() {
+      if (!this.ctx) {
+        try {
+          this.ctx = new AudioContext();
+          this.master = this.ctx.createGain();
+          this.master.connect(this.ctx.destination);
+          this.musicGain = this.ctx.createGain();
+          this.musicGain.gain.value = 0.9;
+          this.musicGain.connect(this.master);
+          this.sfxGain = this.ctx.createGain();
+          this.sfxGain.gain.value = 1;
+          this.sfxGain.connect(this.master);
+          this.applyMaster();
+        } catch {
+          return null;
+        }
+      }
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+      return this.ctx;
+    }
+    noise() {
+      const ctx2 = this.ensure();
+      if (!ctx2) return null;
+      if (!this.noiseBuf) {
+        const len = Math.floor(ctx2.sampleRate * 0.5);
+        this.noiseBuf = ctx2.createBuffer(1, len, ctx2.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      }
+      return this.noiseBuf;
+    }
+    /** short envelope blip — the atomic unit of retro sound */
+    blip(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      if (!ctx2 || !this.sfxGain) return;
+      const { wave = "square", freq = 440, freqEnd = freq, duration = 0.08, volume = 1 } = opts;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      osc.type = wave;
+      osc.frequency.setValueAtTime(Math.max(1, freq), t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t0 + duration);
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      osc.connect(gain).connect(this.sfxGain);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+    /** noise burst — hits, explosions, percussion (SFX side) */
+    burst(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      const buf = this.noise();
+      if (!ctx2 || !buf || !this.sfxGain) return;
+      const { duration = 0.15, volume = 0.6, lp = 0, hp = 0 } = opts;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      let node = src;
+      if (lp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = lp;
+        node.connect(f);
+        node = f;
+      }
+      if (hp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "highpass";
+        f.frequency.value = hp;
+        node.connect(f);
+        node = f;
+      }
+      node.connect(gain).connect(this.sfxGain);
+      src.start(t0);
+      src.stop(t0 + duration + 0.02);
+    }
+    /** named presets; games may add their own via registerPreset */
+    preset(name) {
+      const custom = _Sfx.customPresets[name];
+      if (custom) {
+        custom(this);
+        return;
+      }
+      switch (name) {
+        case "shoot":
+          this.blip({ wave: "square", freq: 880, freqEnd: 220, duration: 0.07 });
+          break;
+        case "hit":
+          this.blip({ wave: "sawtooth", freq: 200, freqEnd: 60, duration: 0.12 });
+          break;
+        case "pickup":
+          this.blip({ wave: "triangle", freq: 660, freqEnd: 1320, duration: 0.09 });
+          break;
+        case "death":
+          this.blip({ wave: "sawtooth", freq: 320, freqEnd: 40, duration: 0.4, volume: 0.8 });
+          break;
+        case "ui":
+          this.blip({ wave: "square", freq: 520, freqEnd: 700, duration: 0.05, volume: 0.6 });
+          break;
+        case "explode":
+          this.burst({ duration: 0.5, volume: 0.7, lp: 900 });
+          this.blip({ wave: "sawtooth", freq: 120, freqEnd: 30, duration: 0.4, volume: 0.7 });
+          break;
+        case "missile":
+          this.burst({ duration: 0.3, volume: 0.4, hp: 800 });
+          this.blip({ wave: "sawtooth", freq: 300, freqEnd: 900, duration: 0.25, volume: 0.4 });
+          break;
+      }
+    }
+    static registerPreset(name, fn) {
+      _Sfx.customPresets[name] = fn;
+    }
+    /**
+     * Legacy single-voice API (kept for existing callers): wraps the notes in a
+     * one-track Song. `stepMs` is the per-note interval.
+     */
+    startMusic(notes, stepMs = 140, opts = {}) {
+      this.playSong({ stepMs, tracks: [{ wave: opts.wave ?? "triangle", notes, gain: 0.3 }] });
+    }
+    /** Start a looping multi-voice song. Replaces any current song. */
+    playSong(song) {
+      this.stopMusic();
+      this.song = song;
+      this.step = 0;
+      const ctx2 = this.ensure();
+      if (!ctx2) return;
+      this.nextTime = ctx2.currentTime + 0.06;
+      this.timer = window.setInterval(() => this.pump(), 25);
+      this.pump();
+    }
+    stopMusic() {
+      if (this.timer !== null) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      this.song = null;
+    }
+    get musicPlaying() {
+      return this.song !== null;
+    }
+    /** schedule ahead ~120ms; skipped while the context is suspended (no gesture yet) */
+    pump() {
+      const ctx2 = this.ctx;
+      const song = this.song;
+      if (!ctx2 || !song || !this.musicGain) return;
+      if (ctx2.state !== "running") return;
+      const horizon = ctx2.currentTime + 0.12;
+      while (this.nextTime < horizon) {
+        this.scheduleStep(song, this.step, this.nextTime);
+        this.step += 1;
+        this.nextTime += song.stepMs / 1e3;
+      }
+    }
+    scheduleStep(song, step2, t) {
+      const ctx2 = this.ctx;
+      const len = song.tracks.reduce((m, tr) => Math.max(m, tr.notes.length), song.drums ? song.drums.steps.length : 0);
+      if (len === 0) return;
+      const s = step2 % len;
+      for (const tr of song.tracks) {
+        const f0 = tr.notes[s % tr.notes.length];
+        if (!f0) continue;
+        const freq = semitone(f0, tr.shift ?? 0);
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = tr.wave;
+        osc.frequency.setValueAtTime(freq, t);
+        const dur = song.stepMs / 1e3 * (tr.gate ?? 0.9);
+        const g = tr.gain ?? 0.22;
+        gain.gain.setValueAtTime(1e-4, t);
+        gain.gain.linearRampToValueAtTime(g, t + 8e-3);
+        gain.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+        let node = osc;
+        if (tr.lp) {
+          const f = ctx2.createBiquadFilter();
+          f.type = "lowpass";
+          f.frequency.value = tr.lp;
+          node.connect(f);
+          node = f;
+        }
+        node.connect(gain).connect(this.musicGain);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      }
+      if (song.drums) {
+        const ch = song.drums.steps[s % song.drums.steps.length];
+        const dg = song.drums.gain ?? 0.5;
+        if (ch === "k") this.drumKick(t, dg);
+        else if (ch === "s") this.drumSnare(t, dg * 0.7);
+        else if (ch === "h") this.drumHat(t, dg * 0.35);
+      }
+    }
+    drumKick(t, g) {
+      const ctx2 = this.ctx;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.13);
+      osc.connect(gain).connect(this.musicGain);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+    drumSnare(t, g) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 1800;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.09);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.1);
+    }
+    drumHat(t, g) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 7e3;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.035);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.05);
+    }
+  };
+  __publicField(_Sfx, "customPresets", {});
+  var Sfx = _Sfx;
+
+  // MAGA-everything/02-code/armor-games/apps/impossible/src/main.ts
+  var DT = 1 / 120;
+  var SPEED = 360;
+  var GRAV = 2600;
+  var JUMP_V = 880;
+  var CUBE = 34;
+  var JUMP_BUFFER = 0.1;
+  var COYOTE = 0.06;
+  var RESPAWN_MS = 160;
+  var GROUND_Y = 430;
+  var W = 960;
+  var H = 540;
+  var BADGE_H = 22;
+  var badgeEl = document.querySelector(".badge");
+  var muteBtn = document.getElementById("mute");
+  var LEVEL = [
+    ["gap", 1400, 130],
+    ["spike", 1900, 40],
+    ["spike", 2400, 40],
+    ["spike", 2440, 40],
+    // double spike
+    ["block", 3e3, 120, 70],
+    ["spike", 3400, 40],
+    ["gap", 3900, 170],
+    ["block", 4400, 90, 110],
+    ["spike", 5e3, 40],
+    ["spike", 5040, 40],
+    ["spike", 5080, 40],
+    // triple
+    ["block", 5600, 200, 50],
+    ["spike", 5650, 40],
+    ["gap", 6300, 150],
+    ["spike", 6900, 40],
+    ["block", 7100, 100, 90],
+    ["spike", 7300, 40],
+    ["gap", 7800, 200],
+    ["spike", 8500, 40],
+    ["spike", 8540, 40],
+    ["block", 9100, 140, 60],
+    ["spike", 9400, 40]
+  ];
+  var LEVEL_END = 9900;
+  var cv = document.createElement("canvas");
+  cv.width = W;
+  cv.height = H;
+  document.body.appendChild(cv);
+  var ctx = cv.getContext("2d");
+  var cachedScale = 1;
+  var toLogical = (cx, cy) => ({ x: cx / cachedScale, y: cy / cachedScale });
+  function layout() {
+    const vp = viewport();
+    const badgeH = badgeEl?.offsetHeight ?? BADGE_H;
+    if (muteBtn) muteBtn.style.top = `${badgeH + 4}px`;
+    const avail = { width: vp.width, height: vp.height - badgeH };
+    const s = fitIntegerScale(W, H, avail, 4);
+    const off = letterboxOffset(W, H, s, avail);
+    cachedScale = s;
+    cv.style.width = `${W * s}px`;
+    cv.style.height = `${H * s}px`;
+    cv.style.left = `${off.x}px`;
+    cv.style.top = `${off.y + badgeH}px`;
+  }
+  window.addEventListener("resize", layout);
+  layout();
+  var input = new Input();
+  input.attach(cv, toLogical);
+  var sfx = new Sfx();
+  if (muteBtn) {
+    const paint = () => {
+      muteBtn.textContent = sfx.muted ? "SOUND OFF" : "SOUND ON";
+    };
+    muteBtn.addEventListener("click", () => {
+      sfx.muted = !sfx.muted;
+      paint();
+    });
+    paint();
+  }
+  var state;
+  var cube;
+  var particles;
+  var camX;
+  var attempt;
+  var deaths;
+  var jumpBuf;
+  var coyoteT;
+  var deadT;
+  var clearT;
+  var paused;
+  var best = load("impossible", "best-progress", 0);
+  var prevPointerActive = false;
+  function reset(full) {
+    if (full) {
+      attempt = 0;
+      deaths = 0;
+    }
+    attempt++;
+    state = "running";
+    cube = { x: 0, y: GROUND_Y - CUBE, vy: 0, grounded: true, rot: 0 };
+    particles = [];
+    camX = 0;
+    jumpBuf = 0;
+    coyoteT = 0;
+    deadT = 0;
+    clearT = 0;
+    paused = false;
+  }
+  reset(true);
+  function pressJump() {
+    jumpBuf = JUMP_BUFFER;
+  }
+  function floorAt(x) {
+    let top = -Infinity, inGap = false;
+    for (const [t, ox, ow, oh] of LEVEL) {
+      if (x < ox || x > ox + ow) continue;
+      if (t === "gap") inGap = true;
+      if (t === "block") top = Math.max(top, GROUND_Y - (oh ?? 0));
+    }
+    if (top > -Infinity) return top;
+    return inGap ? -Infinity : GROUND_Y;
+  }
+  function solidSideAt(x, y) {
+    for (const [t, ox, ow, oh] of LEVEL) {
+      if (t !== "block") continue;
+      const top = GROUND_Y - (oh ?? 0);
+      if (x > ox && x < ox + ow && y + CUBE > top + 2 && y < GROUND_Y) return true;
+    }
+    return false;
+  }
+  function spikeAt(x, y) {
+    for (const [t, ox, ow] of LEVEL) {
+      if (t !== "spike") continue;
+      const cx = x + CUBE / 2, cy = y + CUBE;
+      if (cx > ox + 4 && cx < ox + ow - 4 && cy > GROUND_Y - 26) return true;
+    }
+    return false;
+  }
+  function die() {
+    const prog = cube.x / LEVEL_END;
+    if (prog > best) best = prog;
+    save("impossible", "best-progress", best);
+    state = "dead";
+    deadT = 0;
+    deaths++;
+    sfx.preset("death");
+    for (let i = 0; i < 26; i++) particles.push({
+      x: cube.x + CUBE / 2,
+      y: cube.y + CUBE / 2,
+      vx: (Math.random() - 0.5) * 700,
+      vy: -Math.random() * 600 - 100,
+      s: 4 + Math.random() * 8,
+      life: 0.5 + Math.random() * 0.4
+    });
+  }
+  function step(dt) {
+    if (state === "dead") {
+      deadT += dt * 1e3;
+      if (deadT >= RESPAWN_MS) reset(false);
+      return;
+    }
+    if (state === "clear") {
+      clearT += dt;
+      return;
+    }
+    if (paused) return;
+    cube.x += SPEED * dt;
+    const footX = cube.x + CUBE / 2;
+    const floor = floorAt(footX);
+    if (cube.grounded) {
+      if (floor === -Infinity || cube.y + CUBE < floor - 1) {
+        cube.grounded = false;
+        coyoteT = COYOTE;
+      }
+    } else {
+      coyoteT = Math.max(0, coyoteT - dt);
+      cube.vy += GRAV * dt;
+      cube.y += cube.vy * dt;
+      if (floor > -Infinity && cube.vy >= 0 && cube.y + CUBE >= floor) {
+        cube.y = floor - CUBE;
+        cube.vy = 0;
+        cube.grounded = true;
+        cube.rot = Math.round(cube.rot / (Math.PI / 2)) * (Math.PI / 2);
+      }
+    }
+    if (!cube.grounded) cube.rot += dt * 4.2;
+    jumpBuf = Math.max(0, jumpBuf - dt);
+    if (jumpBuf > 0 && (cube.grounded || coyoteT > 0)) {
+      cube.vy = -JUMP_V;
+      cube.grounded = false;
+      coyoteT = 0;
+      jumpBuf = 0;
+      sfx.blip({ wave: "square", freq: 520, freqEnd: 700, duration: 0.05, volume: 0.4 });
+    }
+    if (spikeAt(cube.x, cube.y) || solidSideAt(cube.x + CUBE, cube.y)) return die();
+    if (floor === -Infinity && cube.y + CUBE > GROUND_Y + 8) return die();
+    if (cube.x >= LEVEL_END) {
+      state = "clear";
+      clearT = 0;
+      sfx.preset("pickup");
+      if (1 > best) {
+        best = 1;
+        save("impossible", "best-progress", best);
+      }
+    }
+    const prog = cube.x / LEVEL_END;
+    if (prog > best) best = prog;
+  }
+  function pollInput() {
+    if (input.wasPressed("fire") || input.wasPressed("up")) pressJump();
+    if (input.pointer.active && !prevPointerActive) pressJump();
+    prevPointerActive = input.pointer.active;
+    if (input.wasPressed("action")) reset(false);
+    if (input.wasPressed("pause")) paused = !paused;
+    input.endFrame();
+  }
+  input.setKeymaps({ p1: { KeyZ: "fire", KeyR: "action" } });
+  var acc = 0;
+  var last = performance.now();
+  function frame(now) {
+    acc += Math.min(0.1, (now - last) / 1e3);
+    last = now;
+    pollInput();
+    while (acc >= DT) {
+      step(DT);
+      acc -= DT;
+    }
+    for (const p of particles) {
+      p.x += p.vx * DT;
+      p.y += p.vy * DT;
+      p.vy += GRAV * DT * 0.6;
+      p.life -= DT;
+    }
+    particles = particles.filter((p) => p.life > 0);
+    camX = cube.x - 220;
+    draw();
+    requestAnimationFrame(frame);
+  }
+  function draw() {
+    ctx.fillStyle = "#e8e8e8";
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(-camX, 0);
+    ctx.fillStyle = "#2b2b2b";
+    ctx.fillRect(camX - 50, GROUND_Y, W + 100, H - GROUND_Y);
+    ctx.fillStyle = "#e8e8e8";
+    for (const [t, gx, gw] of LEVEL) if (t === "gap") ctx.fillRect(gx, GROUND_Y, gw, H - GROUND_Y);
+    ctx.strokeStyle = "#2b2b2b";
+    ctx.lineWidth = 3;
+    for (const [t, gx, gw] of LEVEL) if (t === "gap") ctx.strokeRect(gx, GROUND_Y, gw, 4);
+    for (const [t, ox, ow, oh] of LEVEL) {
+      if (t === "spike") {
+        ctx.fillStyle = "#2b2b2b";
+        ctx.beginPath();
+        ctx.moveTo(ox, GROUND_Y);
+        ctx.lineTo(ox + ow / 2, GROUND_Y - 34);
+        ctx.lineTo(ox + ow, GROUND_Y);
+        ctx.fill();
+      } else if (t === "block") {
+        ctx.fillStyle = "#4a6fa5";
+        ctx.fillRect(ox, GROUND_Y - (oh ?? 0), ow, oh ?? 0);
+        ctx.strokeStyle = "#2b2b2b";
+        ctx.strokeRect(ox, GROUND_Y - (oh ?? 0), ow, oh ?? 0);
+      }
+    }
+    ctx.fillStyle = "#2b8a3e";
+    ctx.fillRect(LEVEL_END, GROUND_Y - 160, 8, 160);
+    ctx.fillStyle = "#d6336c";
+    for (const p of particles) ctx.fillRect(p.x, p.y, p.s, p.s);
+    if (state !== "dead") {
+      ctx.save();
+      ctx.translate(cube.x + CUBE / 2, cube.y + CUBE / 2);
+      ctx.rotate(cube.rot);
+      ctx.fillStyle = "#f08c00";
+      ctx.fillRect(-CUBE / 2, -CUBE / 2, CUBE, CUBE);
+      ctx.strokeStyle = "#2b2b2b";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-CUBE / 2, -CUBE / 2, CUBE, CUBE);
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.fillStyle = "#2b2b2b";
+    ctx.font = "16px monospace";
+    const prog = Math.min(100, Math.max(0, cube.x / LEVEL_END * 100));
+    ctx.fillText(`ATTEMPT ${attempt}   DEATHS ${deaths}   ${prog.toFixed(0)}%   BEST ${(best * 100).toFixed(0)}%`, 16, 26);
+    ctx.fillStyle = "#2b2b2b";
+    ctx.fillRect(16, 36, 300, 8);
+    ctx.fillStyle = "#f08c00";
+    ctx.fillRect(16, 36, 300 * prog / 100, 8);
+    ctx.fillStyle = "#666";
+    ctx.font = "13px monospace";
+    ctx.fillText("SPACE/UP/Z/CLICK jump \xB7 R restart \xB7 ESC pause \u2014 INTERNAL replica", 16, H - 14);
+    if (paused) banner("PAUSED");
+    if (state === "dead") banner("DEAD \u2014 respawning\u2026");
+    if (state === "clear") banner("LEVEL CLEAR \u2014 press R to run again");
+  }
+  function banner(t) {
+    ctx.fillStyle = "rgba(0,0,0,.55)";
+    ctx.fillRect(0, H / 2 - 44, W, 88);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 30px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(t, W / 2, H / 2 + 10);
+    ctx.textAlign = "left";
+  }
+  requestAnimationFrame(frame);
+  if (new URLSearchParams(location.search).has("debug")) {
+    window.__maga = {
+      get state() {
+        return state;
+      },
+      get x() {
+        return cube.x;
+      },
+      get y() {
+        return cube.y;
+      },
+      get attempt() {
+        return attempt;
+      },
+      get deaths() {
+        return deaths;
+      },
+      get progress() {
+        return cube.x / LEVEL_END;
+      },
+      jump: pressJump,
+      reset: () => reset(false),
+      teleport(x) {
+        cube.x = x;
+      },
+      die,
+      LEVEL_END
+    };
+    Object.defineProperty(window, "__proto", {
+      value: {
+        get state() {
+          return state;
+        },
+        get x() {
+          return cube.x;
+        },
+        get y() {
+          return cube.y;
+        },
+        get attempt() {
+          return attempt;
+        },
+        get deaths() {
+          return deaths;
+        },
+        get grounded() {
+          return cube.grounded;
+        },
+        get progress() {
+          return cube.x / LEVEL_END;
+        },
+        get camX() {
+          return camX;
+        },
+        get paused() {
+          return paused;
+        },
+        get best() {
+          return best;
+        },
+        get LEVEL() {
+          return LEVEL;
+        },
+        get LEVEL_END() {
+          return LEVEL_END;
+        }
+      },
+      configurable: true,
+      enumerable: true,
+      writable: false
+    });
+  }
+})();
+
+</script>
+</body>
+</html>

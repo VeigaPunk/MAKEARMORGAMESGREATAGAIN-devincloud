@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1408 704" width="1408" height="704">
+  <!-- Burger Tycoon key art — hand-authored SVG (maga-docs r10). Satirical
+       fast-food empire: cheerful arches front, feedlot + cleared soy field +
+       protest sign behind. Bright palette hiding dark satire. -->
+  <defs>
+    <linearGradient id="bsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7ec8f0"/><stop offset="100%" stop-color="#d8f0e0"/>
+    </linearGradient>
+    <g id="cow">
+      <ellipse rx="26" ry="16" fill="#f0ead8" stroke="#8a8070" stroke-width="2.5"/>
+      <circle cx="24" cy="-8" r="10" fill="#f0ead8" stroke="#8a8070" stroke-width="2.5"/>
+      <circle cx="27" cy="-10" r="2" fill="#333"/><path d="M30 -4 q4 3 0 6" stroke="#8a8070" stroke-width="2" fill="none"/>
+      <ellipse cx="-8" cy="-4" rx="8" ry="6" fill="#3a3a3a"/><ellipse cx="6" cy="4" rx="6" ry="5" fill="#3a3a3a"/>
+      <rect x="-16" y="12" width="5" height="12" fill="#8a8070"/><rect x="10" y="12" width="5" height="12" fill="#8a8070"/>
+    </g>
+  </defs>
+  <rect width="1408" height="704" fill="url(#bsky)"/>
+  <circle cx="1200" cy="90" r="46" fill="#ffe890"/>
+  <!-- cleared soy field (stumps) -->
+  <rect x="0" y="480" width="500" height="224" fill="#8a9a5a"/>
+  <g fill="#6a4a28"><rect x="60" y="540" width="14" height="18"/><rect x="140" y="580" width="14" height="18"/><rect x="230" y="530" width="14" height="18"/><rect x="320" y="590" width="14" height="18"/><rect x="410" y="550" width="14" height="18"/><rect x="90" y="640" width="14" height="18"/><rect x="280" y="650" width="14" height="18"/><rect x="430" y="630" width="14" height="18"/></g>
+  <g stroke="#5a7a3a" stroke-width="3" opacity=".6"><path d="M0 520 h500 M0 560 h500 M0 600 h500 M0 640 h500 M0 680 h500"/></g>
+  <!-- feedlot -->
+  <rect x="500" y="470" width="430" height="234" fill="#b09a70"/>
+  <g stroke="#7a6a48" stroke-width="4"><path d="M500 470 v234 M560 470 v234 M620 470 v234 M680 470 v234 M740 470 v234 M800 470 v234 M860 470 v234 M930 470 v234"/><path d="M500 500 h430 M500 560 h430 M500 620 h430 M500 680 h430"/></g>
+  <use href="#cow" x="580" y="540"/><use href="#cow" x="700" y="600"/><use href="#cow" x="820" y="530"/><use href="#cow" x="640" y="660"/><use href="#cow" x="880" y="640"/>
+  <!-- restaurant -->
+  <g>
+    <rect x="980" y="330" width="360" height="240" fill="#f4e8d0" stroke="#b09a70" stroke-width="4"/>
+    <rect x="980" y="330" width="360" height="60" fill="#d8282a"/>
+    <rect x="1010" y="420" width="90" height="110" fill="#9ad0e8" stroke="#6a9ab8" stroke-width="3"/>
+    <rect x="1130" y="420" width="90" height="110" fill="#9ad0e8" stroke="#6a9ab8" stroke-width="3"/>
+    <rect x="1250" y="420" width="70" height="150" fill="#8a5a30" stroke="#5a3a18" stroke-width="3"/>
+    <!-- golden arches -->
+    <path d="M1080 330 Q1100 240 1120 330 M1120 330 Q1140 240 1160 330" stroke="#ffc020" stroke-width="16" fill="none"/>
+    <rect x="1040" y="560" width="240" height="14" fill="#d8282a"/>
+  </g>
+  <!-- sinister sign -->
+  <g transform="translate(1160 250)">
+    <rect x="-110" y="-34" width="220" height="56" rx="8" fill="#fff" stroke="#d8282a" stroke-width="4"/>
+    <text x="0" y="4" font-family="sans-serif" font-size="26" font-weight="bold" fill="#d8282a" text-anchor="middle">McTYCOON</text>
+  </g>
+  <!-- protest sign -->
+  <g transform="translate(200 420)">
+    <rect x="-6" y="0" width="12" height="90" fill="#6a4a28"/>
+    <rect x="-80" y="-70" width="160" height="70" rx="6" fill="#f0e0c0" stroke="#8a2020" stroke-width="4"/>
+    <text x="0" y="-40" font-family="sans-serif" font-size="20" font-weight="bold" fill="#8a2020" text-anchor="middle">NOT IN OUR</text>
+    <text x="0" y="-14" font-family="sans-serif" font-size="20" font-weight="bold" fill="#8a2020" text-anchor="middle">FOREST!</text>
+  </g>
+  <!-- smokestack smog -->
+  <rect x="1290" y="240" width="30" height="90" fill="#8a8a8a"/>
+  <g fill="#b8b8b8" opacity=".7"><circle cx="1305" cy="230" r="16"/><circle cx="1320" cy="210" r="20"/><circle cx="1340" cy="185" r="24"/></g>
+</svg>

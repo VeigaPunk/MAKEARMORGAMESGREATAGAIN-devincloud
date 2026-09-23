@@ -1,0 +1,31 @@
+/* Level 36 — Portal Maze. Three chambers linked by two portal pairs; route order matters. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 36,
+  name: 'Portal Maze',
+  map: [
+    '############################',
+    '#SS......##......##........#',
+    '#........##..C...##........#',
+    '#..C.....##......##....C...#',
+    '#......T.##.T....##........#',
+    '#........##......##........#',
+    '#........##......##..C.....#',
+    '#........##......##........#',
+    '#....C...##......##........#',
+    '#........##......##........#',
+    '#........##.....T##T.......#',
+    '#........##......##........#',
+    '#........##......##.......G#',
+    '#........##......##.......G#',
+    '############################',
+  ],
+  patrols: [
+    { path: [[2, 2], [7, 2]], speed: 110, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[2, 6], [7, 6]], speed: 130, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[2, 10], [7, 10]], speed: 120, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[11, 3], [16, 3]], speed: 140, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[11, 8], [16, 8]], speed: 150, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[20, 5], [25, 5]], speed: 160, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[21, 9], [25, 9]], speed: 130, mode: 'pingpong', r: 6, phase: 0 },
+  ],
+});

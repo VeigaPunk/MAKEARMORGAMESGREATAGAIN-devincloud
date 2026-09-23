@@ -1,3 +1,34 @@
+
+
+1. Full combat + creation + ladder + shops + economy rebuild (above).
+2. Art: articulated paper-doll fighters, arena scene, UI chrome.
+3. Chrome parity: pause n/a (turn-based) but settings/volume/mute/restart;
+   touch = tap actions (already button-driven).
+
+## Acceptance checklist (to fill at ship)
+
+- [ ] pending
+
+## Verification commands + last results (to fill at ship)
+
+```bash
+# pending
+```
+
+## Known deferrals (to fill at ship)
+
+- pending
+
+## Provenance (to fill at ship)
+
+- pending
+
+---
+
+## Prior run of record — release 1.1 (zcode-vanilla substrate, shipped 2026-09-22)
+
+_Preserved verbatim from that run for continuity; the current run's verification above is the living head of this record._
+
 # Swords & Sandals — ship record (release 1.1, run of 2026-09-22)
 
 Original: Swords & Sandals 2: Emperor's Reign (2007) — gladiator RPG with
@@ -53,3 +84,4 @@ Evidence: `verification/evidence/release-r2/50..53-*.png`, `sas-drive.log.json`.
 Consulted only this working copy (files, git history, prior records) and the
 original game as remembered. No external renditions consulted; no web or
 GitHub searches about this project; nothing left the working copy.
+

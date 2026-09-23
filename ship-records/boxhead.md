@@ -1,3 +1,11 @@
+
+
+---
+
+## Prior run of record — release 1.1 (zcode-vanilla substrate, shipped 2026-09-22)
+
+_Preserved verbatim from that run for continuity; the current run's verification above is the living head of this record._
+
 # Boxhead — ship record (release 1.1, run of 2026-09-22)
 
 Original: Boxhead: 2Play Rooms (2007) — top-down arena survival; solo plus
@@ -54,3 +62,4 @@ Evidence: `verification/evidence/release-r2/20..25-*.png`, `boxhead-drive.log.js
 Consulted only this working copy (files, git history, prior verification
 records) and the original game as remembered. No external renditions, no
 web/GitHub searches about this project. Nothing left the working copy.
+

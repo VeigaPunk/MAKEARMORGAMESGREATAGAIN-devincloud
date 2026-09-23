@@ -60,6 +60,9 @@ export interface PointerState {
   pressed: boolean;
   /** true after the first real pointer event (headless/boot position is not a real aim) */
   seen: boolean;
+  /** button of the active press: 0 primary, 2 secondary (DD-38: enables RMB fire/missile);
+   *  -1 when not pressed */
+  button: number;
 }
 
 interface PlayerState {
@@ -76,7 +79,7 @@ export class Input {
   private overrides: { p1?: Keymap; p2?: Keymap } = {};
   private map1: Keymap = { ...KEYMAP_P1_SOLO };
   private map2: Keymap = { ...KEYMAP_P2 };
-  readonly pointer: PointerState = { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false };
+  readonly pointer: PointerState = { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false, button: -1 };
   private held = new Set<string>();
 
   reset(): void {
@@ -139,6 +142,7 @@ export class Input {
       this.pointer.active = true;
       this.pointer.pressed = true;
       this.pointer.seen = true;
+      this.pointer.button = e.button;
       this.pointer.x = p.x; this.pointer.y = p.y;
       this.pointer.tapped = false;
       try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic/edge pointers */ }
@@ -154,6 +158,7 @@ export class Input {
       const p = toLocal(e);
       this.pointer.x = p.x; this.pointer.y = p.y;
       this.pointer.active = false;
+      this.pointer.button = -1;
       this.pointer.tapped = true; // short-press semantics: tap = action
     };
     canvas.addEventListener('pointerup', release);

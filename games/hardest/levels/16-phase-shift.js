@@ -1,0 +1,32 @@
+/* Level 16 — Phase Shift. Teaches: identical patrol rhythms at offset phases create moving gaps. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 16,
+  name: 'Phase Shift',
+  playerSpeed: 175,
+  map: [
+    '########################',
+    '#SS....................#',
+    '#......................#',
+    '#...C..................#',
+    '#......................#',
+    '#..........K...........#',
+    '#......................#',
+    '#...............C......#',
+    '#......................#',
+    '#...................C..#',
+    '#......................#',
+    '#......................#',
+    '#.....................G#',
+    '########################',
+  ],
+  patrols: [
+    { path: [[3, 2], [20, 2]], speed: 120, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[3, 2], [20, 2]], speed: 120, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[3, 4], [20, 4]], speed: 140, mode: 'pingpong', r: 6, phase: 0.25 },
+    { path: [[3, 4], [20, 4]], speed: 140, mode: 'pingpong', r: 6, phase: 0.75 },
+    { path: [[3, 8], [20, 8]], speed: 160, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[3, 8], [20, 8]], speed: 160, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[3, 10], [20, 10]], speed: 180, mode: 'pingpong', r: 6, phase: 0.75 },
+    { path: [[3, 10], [20, 10]], speed: 180, mode: 'pingpong', r: 6, phase: 0.25 },
+  ],
+});

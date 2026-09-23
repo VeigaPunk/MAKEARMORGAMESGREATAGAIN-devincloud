@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 112" width="96" height="112">
+  <!-- Gold gladiator: laurel crown, sunburst shield -->
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#c9922e"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="112" fill="#2b1e0c"/>
+  <rect y="88" width="96" height="24" fill="#c98d4e"/>
+  <!-- body -->
+  <path d="M30 92 Q30 66 48 64 Q66 66 66 92 Z" fill="#a67c1e"/>
+  <path d="M34 92 Q34 70 48 68 Q62 70 62 92 Z" fill="#c2952c"/>
+  <rect x="38" y="74" width="20" height="4" fill="url(#gold)"/>
+  <!-- head -->
+  <circle cx="48" cy="46" r="14" fill="#e0aa6e"/>
+  <rect x="42" y="52" width="12" height="8" fill="#e0aa6e"/>
+  <!-- open-face golden helm -->
+  <path d="M33 44 Q33 25 48 25 Q63 25 63 44 L59 44 Q59 31 48 31 Q37 31 37 44 Z" fill="url(#gold)"/>
+  <rect x="31" y="43" width="34" height="5" rx="2" fill="#a8781f"/>
+  <!-- laurel -->
+  <path d="M34 38 Q40 26 48 26 Q56 26 62 38" fill="none" stroke="#7ec850" stroke-width="3"/>
+  <ellipse cx="36" cy="33" rx="3" ry="2" fill="#9be06a" transform="rotate(-30 36 33)"/>
+  <ellipse cx="41" cy="29" rx="3" ry="2" fill="#9be06a" transform="rotate(-15 41 29)"/>
+  <ellipse cx="60" cy="33" rx="3" ry="2" fill="#9be06a" transform="rotate(30 60 33)"/>
+  <ellipse cx="55" cy="29" rx="3" ry="2" fill="#9be06a" transform="rotate(15 55 29)"/>
+  <!-- eyes -->
+  <rect x="40" y="45" width="5" height="3" fill="#2b1e0c"/>
+  <rect x="51" y="45" width="5" height="3" fill="#2b1e0c"/>
+  <!-- sunburst shield -->
+  <circle cx="22" cy="74" r="17" fill="#7a5a12"/>
+  <circle cx="22" cy="74" r="14" fill="url(#gold)"/>
+  <g stroke="#7a5a12" stroke-width="2">
+    <line x1="22" y1="62" x2="22" y2="66"/><line x1="22" y1="82" x2="22" y2="86"/>
+    <line x1="10" y1="74" x2="14" y2="74"/><line x1="30" y1="74" x2="34" y2="74"/>
+    <line x1="13" y1="65" x2="16" y2="68"/><line x1="28" y1="80" x2="31" y2="83"/>
+    <line x1="31" y1="65" x2="28" y2="68"/><line x1="16" y1="80" x2="13" y2="83"/>
+  </g>
+  <circle cx="22" cy="74" r="5" fill="#fff3c4"/>
+  <!-- sword -->
+  <rect x="72" y="50" width="4" height="38" fill="#d9c07a"/>
+  <path d="M72 50 L74 42 L76 50 Z" fill="#fff0b8"/>
+  <rect x="68" y="84" width="12" height="4" fill="#6e4a2a"/>
+  <rect x="72" y="88" width="4" height="6" fill="#8a5f33"/>
+</svg>

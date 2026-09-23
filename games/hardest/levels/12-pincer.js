@@ -1,0 +1,32 @@
+/* Level 12 — Pincer. Teaches: counter-phase patrols converging from both sides; wait for the middle timing window. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 12,
+  name: 'Pincer',
+  playerSpeed: 175,
+  map: [
+    '########################',
+    '#SS....................#',
+    '#......................#',
+    '#....C...............C.#',
+    '#......................#',
+    '#......................#',
+    '#.........KK...........#',
+    '#......................#',
+    '#......................#',
+    '#.C..................C.#',
+    '#....................GG#',
+    '#......................#',
+    '#....................GG#',
+    '########################',
+  ],
+  patrols: [
+    { path: [[3, 2], [20, 2]], speed: 120, mode: 'pingpong', phase: 0 },
+    { path: [[20, 2], [3, 2]], speed: 120, mode: 'pingpong', phase: 0.5 },
+    { path: [[3, 5], [20, 5]], speed: 140, mode: 'pingpong', phase: 0 },
+    { path: [[20, 5], [3, 5]], speed: 140, mode: 'pingpong', phase: 0.5 },
+    { path: [[3, 8], [20, 8]], speed: 160, mode: 'pingpong', phase: 0 },
+    { path: [[20, 8], [3, 8]], speed: 160, mode: 'pingpong', phase: 0.5 },
+    { path: [[3, 11], [20, 11]], speed: 170, mode: 'pingpong', phase: 0 },
+    { path: [[20, 11], [3, 11]], speed: 170, mode: 'pingpong', phase: 0.5 },
+  ],
+});

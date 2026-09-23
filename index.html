@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ARCADE NIGHTS — six Flash-era classics, remade</title>
+<style>
+  :root {
+    --bg: #0b0b12; --panel: #14141f; --line: #262637; --ink: #e8e8f0;
+    --dim: #9a9ab0; --accent: #ffcf5c; --accent2: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Courier New", ui-monospace, monospace; min-height: 100%; }
+  main { max-width: 1060px; margin: 0 auto; padding: 32px 20px 60px; }
+  header { text-align: center; padding: 26px 0 8px; }
+  h1 { font-size: clamp(26px, 5vw, 44px); letter-spacing: .12em; margin: 0;
+    color: var(--accent); text-shadow: 3px 3px 0 #3a2a00; font-weight: 700; }
+  .sub { color: var(--dim); margin: 10px 0 0; letter-spacing: .08em; font-size: 13px; }
+  .grid { display: grid; gap: 18px; margin-top: 30px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+  a.card { display: block; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 18px 18px 16px; text-decoration: none; color: var(--ink);
+    transition: transform .12s ease, border-color .12s ease; position: relative; overflow: hidden; }
+  a.card:hover, a.card:focus-visible { transform: translateY(-3px); border-color: var(--accent); outline: none; }
+  .kicker { font-size: 10px; letter-spacing: .22em; color: var(--dim); }
+  .card h2 { margin: 6px 0 4px; font-size: 17px; letter-spacing: .06em; color: var(--accent); }
+  .card p { margin: 0; color: var(--dim); font-size: 12px; line-height: 1.55; }
+  .art { height: 96px; margin: -6px -6px 10px; border-radius: 6px; display: block; }
+  footer { text-align: center; color: var(--dim); font-size: 11px; margin-top: 44px; line-height: 1.7; }
+  footer a { color: var(--dim); }
+  @media (pointer: coarse) { a.card { padding: 16px; } .art { height: 76px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>ARCADE NIGHTS</h1>
+    <p class="sub">SIX FLASH-ERA CLASSICS · REMADE · KEYBOARD · MOUSE · TOUCH</p>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    Every game is a self-contained page — it runs offline from this folder.<br>
+    Original evocations of classics: mechanics and feel honored, art and names our own.<br>
+    <a href="ship-records/README.md">ship records</a> · <a href="verification/doc-audit.md">verification</a>
+  </footer>
+</main>
+
+<script>
+// Card data — art is authored inline SVG per game (no external assets).
+const GAMES = [
+  {
+    href: 'games/boxhead/index.html',
+    kicker: 'ARENA SURVIVAL · 1–2 PLAYERS',
+    title: 'BLOCKHEAD: ARENA NIGHTS',
+    desc: 'Endless zombie waves, kill-streak weapon escalations, explosive barrels. Solo, shared-keyboard co-op, or deathmatch.',
+    art: 'games/art/boxhead.svg',
+  },
+  {
+    href: 'games/impossible/index.html',
+    kicker: 'ONE-BUTTON RHYTHM RUNNER',
+    title: 'IMPOSSIBLE RUN',
+    desc: 'An auto-running cube, a fixed-impulse jump, five tracks of spikes and gaps. Die, restart instantly, learn the rhythm.',
+    art: 'games/art/impossible.svg',
+  },
+  {
+    href: 'games/burger-tycoon/index.html',
+    kicker: 'SUPPLY-CHAIN SATIRE SIM',
+    title: 'BURGER TYCOON',
+    desc: 'Four panes, one ruthless economy. Farmland, feedlot, restaurant, HQ — dirty shortcuts raise profit and backlash.',
+    art: 'games/art/burger.svg',
+  },
+  {
+    href: 'games/chicken-invaders/index.html',
+    kicker: 'VERTICAL SHOOT-’EM-UP',
+    title: 'GALACTIC CHICKEN: NEXT WAVE',
+    desc: 'Ten chapters from the rim of the system to the Sun. Formations, gift weapon power, missiles, chapter bosses.',
+    art: 'games/art/chicken.svg',
+  },
+  {
+    href: 'games/cluck-horizon/index.html',
+    kicker: 'ORIGINAL-IP SHOOT-’EM-UP',
+    title: 'CLUCK HORIZON',
+    desc: 'A courier pilot versus the space flock. Kitchen-tech weapons, supply crates, overgrown chapter bosses.',
+    art: 'games/art/cluck.svg',
+  },
+  {
+    href: 'games/swords-and-sandals/index.html',
+    kicker: 'GLADIATOR RPG · TURN-BASED',
+    title: 'SANDALS OF STEEL',
+    desc: 'Forge a gladiator, fight a ladder of arena champions, buy steel and spells, dethrone the Emperor.',
+    art: 'games/art/sandals.svg',
+  },
+  {
+    href: 'games/hardest/index.html',
+    kicker: 'PRECISION DODGE MAZES',
+    title: 'THE WORLD’S CRUELEST GAME',
+    desc: 'A red square, patrolling dots, 114 mazes of coins, keys, doors and teleporters. Every death is your fault.',
+    art: 'games/art/hardest.svg',
+  },
+];
+
+const grid = document.getElementById('grid');
+for (const g of GAMES) {
+  const a = document.createElement('a');
+  a.className = 'card';
+  a.href = g.href;
+  a.innerHTML =
+    '<img class="art" src="' + g.art + '" alt="" loading="lazy">' +
+    '<div class="kicker">' + g.kicker + '</div>' +
+    '<h2>' + g.title + '</h2>' +
+    '<p>' + g.desc + '</p>';
+  grid.appendChild(a);
+}
+</script>
+</body>
+</html>

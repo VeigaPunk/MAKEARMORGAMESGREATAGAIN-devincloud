@@ -13,19 +13,21 @@ const STAGE_H = 400;
 // badge height is measured live (it wraps on narrow screens — RT-3)
 const badgeEl = document.querySelector<HTMLElement>('.badge');
 
-const app = new Application();
-await app.init({
-  width: STAGE_W,
-  height: STAGE_H,
-  background: 0x0a0a0f,
-  antialias: false,
-  resolution: window.devicePixelRatio || 1,
-  autoDensity: true,
-  // retro 2D: WebGL everywhere, never hang on WebGPU/Dawn edge cases
-  preference: 'webgl',
-});
-document.body.appendChild(app.canvas);
-app.canvas.tabIndex = 0;
+(async () => {
+  const app = new Application();
+  await app.init({
+    width: STAGE_W,
+    height: STAGE_H,
+    background: 0x0a0a0f,
+    antialias: false,
+    resolution: window.devicePixelRatio || 1,
+    autoDensity: true,
+    // retro 2D: WebGL everywhere, never hang on WebGPU/Dawn edge cases
+    preference: 'webgl',
+  });
+  document.body.appendChild(app.canvas);
+  app.canvas.tabIndex = 0;
+
 
 const input = new Input();
 const sfx = new Sfx();
@@ -86,6 +88,7 @@ function layout(): void {
 window.addEventListener('resize', layout);
 layout();
 
-app.ticker.add((ticker) => {
-  game.tick(ticker.deltaMS / 1000);
-});
+  app.ticker.add((ticker) => {
+    game.tick(ticker.deltaMS / 1000);
+  });
+})();

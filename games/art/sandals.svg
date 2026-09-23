@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1408 704" width="1408" height="704">
+  <!-- Swords & Sandals key art — hand-authored SVG (maga-docs r10). Cartoon
+       gladiator arena: scarred champion raising battered sword, roaring crowd,
+       defeated opponent + coins, warm desert palette. -->
+  <defs>
+    <linearGradient id="asky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0c060"/><stop offset="100%" stop-color="#e09850"/>
+    </linearGradient>
+    <g id="crowd"><circle r="9" fill="#8a5a3a"/><rect x="-7" y="6" width="14" height="12" rx="3" fill="#6a4a30"/></g>
+    <g id="coin"><circle r="8" fill="#ffd040" stroke="#b89020" stroke-width="2"/><text y="4" font-size="10" text-anchor="middle" fill="#b89020" font-family="sans-serif" font-weight="bold">$</text></g>
+  </defs>
+  <rect width="1408" height="704" fill="url(#asky)"/>
+  <!-- colosseum wall + crowd tiers -->
+  <path d="M0 240 Q704 140 1408 240 L1408 460 L0 460 Z" fill="#c89858"/>
+  <path d="M0 260 Q704 160 1408 260" stroke="#a87838" stroke-width="6" fill="none"/>
+  <path d="M0 320 Q704 220 1408 320" stroke="#a87838" stroke-width="6" fill="none"/>
+  <path d="M0 380 Q704 280 1408 380" stroke="#a87838" stroke-width="6" fill="none"/>
+  <g>
+    <use href="#crowd" x="120" y="270"/><use href="#crowd" x="240" y="255"/><use href="#crowd" x="360" y="245"/><use href="#crowd" x="480" y="238"/><use href="#crowd" x="600" y="233"/><use href="#crowd" x="720" y="231"/><use href="#crowd" x="840" y="233"/><use href="#crowd" x="960" y="238"/><use href="#crowd" x="1080" y="246"/><use href="#crowd" x="1200" y="256"/><use href="#crowd" x="1300" y="268"/>
+    <use href="#crowd" x="160" y="330"/><use href="#crowd" x="300" y="318"/><use href="#crowd" x="440" y="308"/><use href="#crowd" x="580" y="301"/><use href="#crowd" x="720" y="298"/><use href="#crowd" x="860" y="301"/><use href="#crowd" x="1000" y="308"/><use href="#crowd" x="1140" y="318"/><use href="#crowd" x="1260" y="330"/>
+    <use href="#crowd" x="200" y="390"/><use href="#crowd" x="360" y="378"/><use href="#crowd" x="520" y="369"/><use href="#crowd" x="680" y="364"/><use href="#crowd" x="840" y="364"/><use href="#crowd" x="1000" y="369"/><use href="#crowd" x="1160" y="378"/><use href="#crowd" x="1280" y="390"/>
+  </g>
+  <!-- arena sand -->
+  <ellipse cx="704" cy="560" rx="700" ry="160" fill="#e8c078"/>
+  <ellipse cx="704" cy="560" rx="700" ry="160" fill="none" stroke="#b08848" stroke-width="8"/>
+  <g fill="#c8a058" opacity=".7"><ellipse cx="400" cy="600" rx="40" ry="10"/><ellipse cx="1000" cy="620" rx="50" ry="12"/><ellipse cx="700" cy="660" rx="60" ry="10"/></g>
+  <!-- defeated opponent + coins -->
+  <g transform="translate(1050 590) rotate(12)">
+    <ellipse rx="60" ry="18" fill="#907050"/>
+    <rect x="-50" y="-16" width="70" height="26" rx="10" fill="#7a5a40"/>
+    <circle cx="30" cy="-10" r="14" fill="#c89868"/>
+    <path d="M-40 -20 l-30 -14" stroke="#8a8a8a" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <use href="#coin" x="960" y="620"/><use href="#coin" x="990" y="640"/><use href="#coin" x="1020" y="615"/><use href="#coin" x="940" y="645"/><use href="#coin" x="1060" y="640"/>
+  <!-- champion gladiator -->
+  <g transform="translate(620 480)">
+    <!-- raised sword arm -->
+    <path d="M30 -60 L70 -140" stroke="#c89868" stroke-width="16" stroke-linecap="round"/>
+    <g transform="translate(70 -140) rotate(-18)">
+      <rect x="-5" y="-110" width="10" height="110" fill="#b8c8d8" stroke="#6a7a8a" stroke-width="3"/>
+      <path d="M-5 -110 L0 -126 L5 -110 Z" fill="#b8c8d8" stroke="#6a7a8a" stroke-width="3"/>
+      <rect x="-16" y="-4" width="32" height="8" rx="3" fill="#8a6a30"/>
+      <rect x="-4" y="4" width="8" height="22" rx="3" fill="#5a4020"/>
+    </g>
+    <!-- mismatched armor torso -->
+    <path d="M-34 -70 Q0 -88 34 -70 L30 10 Q0 24 -30 10 Z" fill="#8a6a48" stroke="#5a4028" stroke-width="4"/>
+    <rect x="-34" y="-74" width="20" height="30" rx="6" fill="#6a7a8a" stroke="#4a5a6a" stroke-width="3"/>
+    <rect x="14" y="-74" width="20" height="30" rx="6" fill="#a85838" stroke="#783828" stroke-width="3"/>
+    <!-- head: scarred, helmet off -->
+    <circle cx="0" cy="-104" r="26" fill="#c89868" stroke="#8a6038" stroke-width="4"/>
+    <path d="M-14 -112 l10 8 M-4 -116 l8 10" stroke="#8a4030" stroke-width="3"/>
+    <path d="M-20 -118 q20 -18 40 0 l-4 -14 q-16 -10 -32 0 Z" fill="#6a5a48"/>
+    <circle cx="-8" cy="-106" r="3" fill="#222"/><circle cx="10" cy="-106" r="3" fill="#222"/>
+    <path d="M-8 -92 q10 8 20 0" stroke="#6a4028" stroke-width="3" fill="none"/>
+    <!-- legs -->
+    <rect x="-26" y="10" width="20" height="60" rx="8" fill="#a87850" stroke="#6a4a30" stroke-width="3"/>
+    <rect x="8" y="10" width="20" height="60" rx="8" fill="#a87850" stroke="#6a4a30" stroke-width="3"/>
+    <rect x="-30" y="66" width="28" height="14" rx="5" fill="#5a4028"/><rect x="4" y="66" width="28" height="14" rx="5" fill="#5a4028"/>
+    <!-- off arm with buckler -->
+    <path d="M-30 -56 L-58 -30" stroke="#c89868" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="-66" cy="-24" r="24" fill="#7a8a9a" stroke="#4a5a6a" stroke-width="4"/>
+    <circle cx="-66" cy="-24" r="8" fill="#4a5a6a"/>
+  </g>
+  <!-- sun + dust -->
+  <circle cx="180" cy="110" r="52" fill="#ffe8a0"/>
+  <g fill="#fff" opacity=".25"><circle cx="500" cy="500" r="3"/><circle cx="900" cy="480" r="2.5"/><circle cx="300" cy="560" r="2"/><circle cx="1100" cy="540" r="3"/></g>
+</svg>

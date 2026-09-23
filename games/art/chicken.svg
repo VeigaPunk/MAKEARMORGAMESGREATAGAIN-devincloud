@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 1408" width="704" height="1408">
+  <!-- Chicken Invaders key art — hand-authored SVG (maga-docs r10). Vertical
+       shmup: starfighter bottom firing up at giant chicken boss in space helmet,
+       formation chickens, egg projectiles, starfield. -->
+  <defs>
+    <radialGradient id="space" cx="50%" cy="20%" r="100%">
+      <stop offset="0%" stop-color="#1a1440"/><stop offset="100%" stop-color="#05030f"/>
+    </radialGradient>
+    <g id="chick">
+      <ellipse rx="22" ry="18" fill="#f8f0e0" stroke="#b0987a" stroke-width="2.5"/>
+      <circle cx="14" cy="-14" r="11" fill="#f8f0e0" stroke="#b0987a" stroke-width="2.5"/>
+      <path d="M8 -24 q4 -8 8 0 q4 -8 8 0" fill="#e04030"/>
+      <path d="M24 -14 l10 4 -10 4 z" fill="#f0a020"/>
+      <circle cx="16" cy="-16" r="2.4" fill="#222"/>
+      <path d="M-14 6 q-14 8 -10 20 M14 6 q14 8 10 20" stroke="#f8f0e0" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </g>
+    <g id="egg">
+      <ellipse rx="9" ry="12" fill="#f8f0d8" stroke="#c8b890" stroke-width="2"/>
+    </g>
+  </defs>
+  <rect width="704" height="1408" fill="url(#space)"/>
+  <g fill="#fff">
+    <circle cx="60" cy="80" r="1.6"/><circle cx="200" cy="40" r="1.2"/><circle cx="340" cy="110" r="1.8"/><circle cx="500" cy="60" r="1.3"/><circle cx="640" cy="140" r="1.6"/>
+    <circle cx="120" cy="240" r="1.4"/><circle cx="420" cy="200" r="1.1"/><circle cx="580" cy="300" r="1.7"/><circle cx="80" cy="420" r="1.3"/><circle cx="300" cy="380" r="1.5"/>
+    <circle cx="520" cy="460" r="1.2"/><circle cx="660" cy="520" r="1.6"/><circle cx="160" cy="560" r="1.4"/><circle cx="380" cy="620" r="1.2"/><circle cx="620" cy="700" r="1.5"/>
+    <circle cx="100" cy="760" r="1.3"/><circle cx="260" cy="820" r="1.6"/><circle cx="480" cy="880" r="1.2"/><circle cx="640" cy="940" r="1.5"/><circle cx="180" cy="1000" r="1.4"/>
+    <circle cx="400" cy="1080" r="1.3"/><circle cx="580" cy="1140" r="1.6"/><circle cx="80" cy="1200" r="1.2"/><circle cx="320" cy="1260" r="1.5"/><circle cx="540" cy="1300" r="1.3"/>
+  </g>
+  <!-- giant chicken boss in space helmet -->
+  <g transform="translate(352 240)">
+    <circle r="120" fill="#f8f0e0" stroke="#b0987a" stroke-width="5"/>
+    <circle cx="60" cy="-60" r="46" fill="#f8f0e0" stroke="#b0987a" stroke-width="5"/>
+    <path d="M30 -100 q14 -30 30 0 q14 -30 30 0" fill="#e04030"/>
+    <path d="M100 -62 l34 12 -34 12 z" fill="#f0a020"/>
+    <circle cx="70" cy="-70" r="7" fill="#222"/>
+    <!-- helmet -->
+    <circle cx="60" cy="-60" r="62" fill="#aee0f8" opacity=".35" stroke="#d8f0ff" stroke-width="4"/>
+    <path d="M-2 -60 a62 62 0 0 1 40 -52" stroke="#fff" stroke-width="6" fill="none" opacity=".7" stroke-linecap="round"/>
+    <!-- wings -->
+    <path d="M-110 20 q-60 30 -40 90 q30 -20 60 -10" fill="#f8f0e0" stroke="#b0987a" stroke-width="4"/>
+    <path d="M110 20 q60 30 40 90 q-30 -20 -60 -10" fill="#f8f0e0" stroke="#b0987a" stroke-width="4"/>
+  </g>
+  <!-- formation chickens -->
+  <use href="#chick" x="140" y="480"/><use href="#chick" x="280" y="470"/><use href="#chick" x="420" y="470"/><use href="#chick" x="560" y="480"/>
+  <use href="#chick" x="210" y="560"/><use href="#chick" x="350" y="555"/><use href="#chick" x="490" y="560"/>
+  <use href="#chick" x="140" y="640"/><use href="#chick" x="560" y="640"/>
+  <!-- egg projectiles -->
+  <use href="#egg" x="300" y="720"/><use href="#egg" x="420" y="780"/><use href="#egg" x="240" y="860"/><use href="#egg" x="480" y="920"/><use href="#egg" x="360" y="980"/>
+  <!-- player shots -->
+  <g stroke="#60f0ff" stroke-width="5" stroke-linecap="round">
+    <path d="M352 1180 v-70"/><path d="M352 1060 v-70"/><path d="M352 940 v-70"/>
+  </g>
+  <g fill="#bff8ff"><circle cx="352" cy="1110" r="4"/><circle cx="352" cy="990" r="4"/><circle cx="352" cy="870" r="4"/></g>
+  <!-- starfighter -->
+  <g transform="translate(352 1260)">
+    <path d="M0 -60 L26 20 L10 10 L0 30 L-10 10 L-26 20 Z" fill="#c8d8e8" stroke="#6a8aa8" stroke-width="4"/>
+    <path d="M0 -60 L14 -10 L-14 -10 Z" fill="#e05040"/>
+    <circle cy="-24" r="9" fill="#aee0f8" stroke="#6a8aa8" stroke-width="3"/>
+    <path d="M-26 20 l-14 26 M26 20 l14 26" stroke="#6a8aa8" stroke-width="6" stroke-linecap="round"/>
+    <path d="M-8 34 q0 20 8 26 q8 -6 8 -26" fill="#ffb020"/>
+  </g>
+  <!-- HUD hint -->
+  <g font-family="monospace" font-size="22" fill="#60f0ff" opacity=".8">
+    <text x="24" y="40">SCORE 013400</text><text x="560" y="40">WAVE 3</text>
+  </g>
+</svg>

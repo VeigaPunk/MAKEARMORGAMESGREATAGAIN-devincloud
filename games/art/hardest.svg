@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1408 704" width="1408" height="704">
+  <!-- The World's Cruellest Game key art — hand-authored SVG. Corridor maze,
+       red square threading between blue patrol dots toward coins and the goal. -->
+  <defs>
+    <g id="dot">
+      <circle r="17" fill="#2f6bff" stroke="#123a9a" stroke-width="3"/>
+      <circle cx="-5" cy="-6" r="4.5" fill="#9fc0ff"/>
+    </g>
+    <g id="coin">
+      <circle r="13" fill="#ffd23e" stroke="#b8860b" stroke-width="3"/>
+      <circle r="5.5" fill="none" stroke="#b8860b" stroke-width="2.5"/>
+    </g>
+  </defs>
+  <rect width="1408" height="704" fill="#0c0c14"/>
+  <!-- maze walls -->
+  <g fill="#e8e8f0">
+    <rect x="120" y="80" width="1168" height="26"/>
+    <rect x="120" y="598" width="1168" height="26"/>
+    <rect x="120" y="80" width="26" height="544"/>
+    <rect x="1262" y="80" width="26" height="544"/>
+    <rect x="300" y="160" width="26" height="240"/>
+    <rect x="300" y="160" width="300" height="26"/>
+    <rect x="760" y="160" width="26" height="330"/>
+    <rect x="760" y="464" width="240" height="26"/>
+    <rect x="1020" y="240" width="26" height="250"/>
+    <rect x="460" y="440" width="26" height="158"/>
+    <rect x="460" y="572" width="180" height="26"/>
+    <rect x="900" y="240" width="180" height="26"/>
+  </g>
+  <!-- subtle grid inside corridors -->
+  <g stroke="#16161f" stroke-width="1">
+    <path d="M146 352 H1262 M704 106 V598"/>
+  </g>
+  <!-- start and goal zones -->
+  <g><rect x="146" y="106" width="74" height="492" fill="#1f4d2a" opacity=".85"/></g>
+  <g><rect x="1188" y="106" width="74" height="492" fill="#1f4d2a" opacity=".85"/></g>
+  <rect x="147" y="330" width="72" height="44" fill="#37d067" opacity=".9"/>
+  <rect x="1189" y="330" width="72" height="44" fill="#37d067" opacity=".9"/>
+  <!-- patrol dots along lanes, some mid-motion trails -->
+  <use href="#dot" x="430" y="220"/><use href="#dot" x="500" y="220"/><use href="#dot" x="570" y="220"/>
+  <use href="#dot" x="700" y="300"/><use href="#dot" x="700" y="370"/>
+  <use href="#dot" x="880" y="530"/><use href="#dot" x="950" y="530"/>
+  <use href="#dot" x="1080" y="180"/><use href="#dot" x="1080" y="250"/>
+  <use href="#dot" x="380" y="500"/><use href="#dot" x="380" y="560"/>
+  <use href="#dot" x="560" y="380"/><use href="#dot" x="640" y="380"/>
+  <use href="#dot" x="1140" y="430"/>
+  <!-- dot motion trails -->
+  <g fill="#2f6bff" opacity=".3">
+    <circle cx="404" cy="220" r="12"/><circle cx="596" cy="220" r="12"/>
+    <circle cx="1080" cy="154" r="12"/><circle cx="906" cy="530" r="12"/>
+  </g>
+  <!-- coins -->
+  <use href="#coin" x="350" y="330"/><use href="#coin" x="560" y="270"/><use href="#coin" x="660" y="470"/>
+  <use href="#coin" x="980" y="360"/><use href="#coin" x="840" y="200"/><use href="#coin" x="520" y="520"/>
+  <use href="#coin" x="1120" y="540"/><use href="#coin" x="240" y="240"/>
+  <!-- hero red square threading between dots -->
+  <g>
+    <rect x="610" y="334" width="34" height="34" fill="#ff2e2e" stroke="#8f1010" stroke-width="4"/>
+    <rect x="610" y="334" width="34" height="34" fill="#ff6b6b" opacity=".4"/>
+    <rect x="574" y="342" width="26" height="26" fill="#ff2e2e" opacity=".35"/>
+    <rect x="544" y="348" width="18" height="18" fill="#ff2e2e" opacity=".18"/>
+  </g>
+  <rect width="1408" height="704" fill="none" stroke="#000" stroke-width="40" opacity=".35"/>
+</svg>

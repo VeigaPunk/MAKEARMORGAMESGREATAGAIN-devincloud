@@ -1,6 +1,8 @@
 /**
- * Integer scaling, letterboxed — the originals ran at fixed resolutions and
- * we scale them the same way the Flash letterbox did: integer factors only.
+ * Fixed-stage scaling with letterboxing — the originals ran at fixed
+ * resolutions and we scale the same way the Flash letterbox did:
+ * integer factors ≥1x; a *uniform* fractional downscale below 1x when the
+ * viewport is smaller than the stage (never crop, never non-uniform stretch).
  */
 
 export interface Viewport { width: number; height: number }

@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>BURGER TYCOON</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #1a1a1a; height: 100%; overflow: hidden; }
+  #wrap { position: fixed; left: 0; top: 0; }
+  #wrap > * { width: 100%; box-sizing: border-box; }
+  #hud { background: #2b2b2b; color: #eee; font: 13px/1.5 monospace; padding: 6px 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+  #hud b { color: #ffd43b; }
+  #tabs { display: flex; }
+  #tabs button { flex: 1; padding: 10px 4px; font: 14px monospace; border: 0; background: #333; color: #aaa; cursor: pointer; }
+  #tabs button.on { background: #4a6fa5; color: #fff; font-weight: bold; }
+  canvas { display: block; background: #e8e0d0; touch-action: none; image-rendering: pixelated; }
+  #log { height: 64px; overflow: hidden; background: #111; color: #8ce99a; font: 12px/1.4 monospace; padding: 4px 12px; }
+.mute {
+    position: fixed; top: 26px; right: 8px; z-index: 10;
+    background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
+    font: 11px/1 monospace; padding: 4px 8px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<button id="mute" class="mute" type="button">SOUND ON</button>
+<div id="wrap">
+  <div id="hud"></div>
+  <div id="tabs"></div>
+  <!-- canvas inserted by main.ts -->
+  <div id="log"></div>
+</div>
+<script>
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/input.ts
+  var KEYMAP_P1_VERSUS = {
+    KeyW: "up",
+    KeyS: "down",
+    KeyA: "left",
+    KeyD: "right",
+    Space: "fire",
+    Enter: "fire",
+    KeyE: "action",
+    KeyM: "action",
+    Digit1: "slot1",
+    Digit2: "slot2",
+    Digit3: "slot3",
+    Escape: "pause",
+    KeyP: "pause"
+  };
+  var KEYMAP_P1_SOLO = {
+    ...KEYMAP_P1_VERSUS,
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right"
+  };
+  var KEYMAP_P2 = {
+    ArrowUp: "up",
+    ArrowDown: "down",
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    Numpad8: "fireUp",
+    Numpad4: "fireLeft",
+    Numpad5: "fireDown",
+    Numpad6: "fireRight",
+    KeyI: "fireUp",
+    KeyJ: "fireLeft",
+    KeyK: "fireDown",
+    KeyL: "fireRight"
+  };
+  var Input = class {
+    constructor() {
+      __publicField(this, "p1", { down: /* @__PURE__ */ new Set(), pressed: /* @__PURE__ */ new Set() });
+      __publicField(this, "p2", { down: /* @__PURE__ */ new Set(), pressed: /* @__PURE__ */ new Set() });
+      __publicField(this, "mode", "solo");
+      __publicField(this, "overrides", {});
+      __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
+      __publicField(this, "map2", { ...KEYMAP_P2 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+    }
+    /** switch keyboard ownership: solo = P1 gets everything; versus = split */
+    setMode(mode) {
+      this.mode = mode;
+      this.rebuild();
+    }
+    rebuild() {
+      const base1 = this.mode === "solo" ? KEYMAP_P1_SOLO : KEYMAP_P1_VERSUS;
+      this.map1 = { ...base1, ...this.overrides.p1 };
+      this.map2 = { ...KEYMAP_P2, ...this.overrides.p2 };
+    }
+    /** attach to the canvas (or window) that receives events */
+    attach(canvas, toLogical2) {
+      window.addEventListener("keydown", (e) => {
+        const t = e.target;
+        const editable = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+        const a1 = this.map1[e.code];
+        const a2 = this.map2[e.code];
+        if (a1 === void 0 && a2 === void 0) return;
+        if (editable) return;
+        e.preventDefault();
+        if (a1 !== void 0) {
+          if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
+          this.p1.down.add(a1);
+        }
+        if (a2 !== void 0) {
+          if (!this.p2.down.has(a2)) this.p2.pressed.add(a2);
+          this.p2.down.add(a2);
+        }
+      });
+      window.addEventListener("keyup", (e) => {
+        const a1 = this.map1[e.code];
+        const a2 = this.map2[e.code];
+        if (a1) this.p1.down.delete(a1);
+        if (a2) this.p2.down.delete(a2);
+      });
+      const toLocal = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return toLogical2(e.clientX - r.left, e.clientY - r.top);
+      };
+      canvas.style.touchAction = "none";
+      canvas.addEventListener("pointerdown", (e) => {
+        const p = toLocal(e);
+        this.pointer.active = true;
+        this.pointer.seen = true;
+        this.pointer.button = e.button;
+        this.pointer.x = p.x;
+        this.pointer.y = p.y;
+        this.pointer.tapped = false;
+        try {
+          canvas.setPointerCapture(e.pointerId);
+        } catch {
+        }
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        const p = toLocal(e);
+        this.pointer.seen = true;
+        this.pointer.x = p.x;
+        this.pointer.y = p.y;
+      });
+      const release = () => {
+        if (!this.pointer.active) return;
+        this.pointer.active = false;
+        this.pointer.button = -1;
+        this.pointer.tapped = true;
+      };
+      canvas.addEventListener("pointerup", release);
+      canvas.addEventListener("pointercancel", release);
+      window.addEventListener("pointerup", release);
+      window.addEventListener("pointercancel", release);
+      const clearKeys = () => {
+        this.p1.down.clear();
+        this.p2.down.clear();
+        this.pointer.active = false;
+        this.pointer.button = -1;
+      };
+      window.addEventListener("blur", clearKeys);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) clearKeys();
+      });
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+    // --- P1 (backward-compatible API) -------------------------------------------
+    isDown(a) {
+      return this.p1.down.has(a);
+    }
+    /** true only on the frame the action went down */
+    wasPressed(a) {
+      return this.p1.pressed.has(a);
+    }
+    /** 8-way movement vector from keys or pointer drag, normalized.
+     *  `pointerDrag=false` disables the drag fallback — touch games with a
+     *  virtual stick pass false so field taps never move the player (D-15). */
+    moveAxis(centerX, centerY, dragRadius, pointerDrag = true) {
+      let x = (this.isDown("right") ? 1 : 0) - (this.isDown("left") ? 1 : 0);
+      let y = (this.isDown("down") ? 1 : 0) - (this.isDown("up") ? 1 : 0);
+      if (x === 0 && y === 0 && pointerDrag && this.pointer.active) {
+        const dx = this.pointer.x - centerX;
+        const dy = this.pointer.y - centerY;
+        const d = Math.hypot(dx, dy);
+        if (d > dragRadius * 0.25) {
+          x = dx / d;
+          y = dy / d;
+        }
+      }
+      return { x, y };
+    }
+    // --- P2 (versus mode) ---------------------------------------------------------
+    isDown2(a) {
+      return this.p2.down.has(a);
+    }
+    wasPressed2(a) {
+      return this.p2.pressed.has(a);
+    }
+    /** P2 movement from the arrow-key cluster (no pointer fallback) */
+    moveAxis2() {
+      return {
+        x: (this.isDown2("right") ? 1 : 0) - (this.isDown2("left") ? 1 : 0),
+        y: (this.isDown2("down") ? 1 : 0) - (this.isDown2("up") ? 1 : 0)
+      };
+    }
+    /**
+     * P2 directional fire vector from the shoot cluster. Null when no shoot key
+     * is held — games should only fire while a direction is held (facing-fire).
+     */
+    fireAxis2() {
+      const x = (this.isDown2("fireRight") ? 1 : 0) - (this.isDown2("fireLeft") ? 1 : 0);
+      const y = (this.isDown2("fireDown") ? 1 : 0) - (this.isDown2("fireUp") ? 1 : 0);
+      if (x === 0 && y === 0) return null;
+      const d = Math.hypot(x, y);
+      return { x: x / d, y: y / d };
+    }
+    // --- rebind (BH-2.5) ----------------------------------------------------------
+    /** Persist/load-friendly: replace keymaps on top of mode defaults. */
+    setKeymaps(maps) {
+      this.overrides = { ...this.overrides, ...maps };
+      this.rebuild();
+    }
+    /** current effective keymaps (for rebind UI / persistence) */
+    getKeymaps() {
+      return { p1: { ...this.map1 }, p2: { ...this.map2 } };
+    }
+    /** call at end of every frame */
+    endFrame() {
+      this.p1.pressed.clear();
+      this.p2.pressed.clear();
+      this.pointer.tapped = false;
+    }
+  };
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/scale.ts
+  function fitIntegerScale(stageW, stageH, vp, maxFactor = 4) {
+    const fit = Math.min(vp.width / stageW, vp.height / stageH);
+    if (fit < 1) return fit;
+    return Math.min(Math.floor(fit), maxFactor);
+  }
+  function letterboxOffset(stageW, stageH, scale, vp) {
+    return {
+      x: Math.floor((vp.width - stageW * scale) / 2),
+      y: Math.floor((vp.height - stageH * scale) / 2)
+    };
+  }
+  function viewport() {
+    return { width: window.innerWidth, height: window.innerHeight };
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/storage.ts
+  var PREFIX = "maga:";
+  function save(game, key, value) {
+    try {
+      localStorage.setItem(PREFIX + game + ":" + key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function load(game, key, fallback) {
+    try {
+      const raw = localStorage.getItem(PREFIX + game + ":" + key);
+      return raw === null ? fallback : JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  }
+
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/sfx.ts
+  function semitone(n, shift) {
+    return n * Math.pow(2, shift / 12);
+  }
+  var _Sfx = class _Sfx {
+    constructor() {
+      __publicField(this, "ctx", null);
+      __publicField(this, "master", null);
+      __publicField(this, "musicGain", null);
+      __publicField(this, "sfxGain", null);
+      __publicField(this, "noiseBuf", null);
+      __publicField(this, "muted", false);
+      __publicField(this, "_volume", 0.5);
+      // --- music: lookahead chip sequencer ----------------------------------------
+      __publicField(this, "timer", null);
+      __publicField(this, "step", 0);
+      __publicField(this, "nextTime", 0);
+      __publicField(this, "song", null);
+    }
+    /** master volume 0..1 — live */
+    set volume(v) {
+      this._volume = Math.max(0, Math.min(1, v));
+      this.applyMaster();
+    }
+    get volume() {
+      return this._volume;
+    }
+    applyMaster() {
+      if (this.master && this.ctx) {
+        this.master.gain.setTargetAtTime(this.muted ? 0 : this._volume, this.ctx.currentTime, 0.02);
+      }
+    }
+    setMuted(m) {
+      this.muted = m;
+      this.applyMaster();
+    }
+    ensure() {
+      if (!this.ctx) {
+        try {
+          this.ctx = new AudioContext();
+          this.master = this.ctx.createGain();
+          this.master.connect(this.ctx.destination);
+          this.musicGain = this.ctx.createGain();
+          this.musicGain.gain.value = 0.9;
+          this.musicGain.connect(this.master);
+          this.sfxGain = this.ctx.createGain();
+          this.sfxGain.gain.value = 1;
+          this.sfxGain.connect(this.master);
+          this.applyMaster();
+        } catch {
+          return null;
+        }
+      }
+      if (this.ctx.state === "suspended") void this.ctx.resume();
+      return this.ctx;
+    }
+    noise() {
+      const ctx2 = this.ensure();
+      if (!ctx2) return null;
+      if (!this.noiseBuf) {
+        const len = Math.floor(ctx2.sampleRate * 0.5);
+        this.noiseBuf = ctx2.createBuffer(1, len, ctx2.sampleRate);
+        const d = this.noiseBuf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      }
+      return this.noiseBuf;
+    }
+    /** short envelope blip — the atomic unit of retro sound */
+    blip(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      if (!ctx2 || !this.sfxGain) return;
+      const { wave = "square", freq = 440, freqEnd = freq, duration = 0.08, volume = 1 } = opts;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      osc.type = wave;
+      osc.frequency.setValueAtTime(Math.max(1, freq), t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), t0 + duration);
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      osc.connect(gain).connect(this.sfxGain);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+    /** noise burst — hits, explosions, percussion (SFX side) */
+    burst(opts = {}) {
+      if (this.muted) return;
+      const ctx2 = this.ensure();
+      const buf = this.noise();
+      if (!ctx2 || !buf || !this.sfxGain) return;
+      const { duration = 0.15, volume = 0.6, lp = 0, hp = 0 } = opts;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx2.createGain();
+      const t0 = ctx2.currentTime;
+      gain.gain.setValueAtTime(volume, t0);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t0 + duration);
+      let node = src;
+      if (lp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "lowpass";
+        f.frequency.value = lp;
+        node.connect(f);
+        node = f;
+      }
+      if (hp) {
+        const f = ctx2.createBiquadFilter();
+        f.type = "highpass";
+        f.frequency.value = hp;
+        node.connect(f);
+        node = f;
+      }
+      node.connect(gain).connect(this.sfxGain);
+      src.start(t0);
+      src.stop(t0 + duration + 0.02);
+    }
+    /** named presets; games may add their own via registerPreset */
+    preset(name) {
+      const custom = _Sfx.customPresets[name];
+      if (custom) {
+        custom(this);
+        return;
+      }
+      switch (name) {
+        case "shoot":
+          this.blip({ wave: "square", freq: 880, freqEnd: 220, duration: 0.07 });
+          break;
+        case "hit":
+          this.blip({ wave: "sawtooth", freq: 200, freqEnd: 60, duration: 0.12 });
+          break;
+        case "pickup":
+          this.blip({ wave: "triangle", freq: 660, freqEnd: 1320, duration: 0.09 });
+          break;
+        case "death":
+          this.blip({ wave: "sawtooth", freq: 320, freqEnd: 40, duration: 0.4, volume: 0.8 });
+          break;
+        case "ui":
+          this.blip({ wave: "square", freq: 520, freqEnd: 700, duration: 0.05, volume: 0.6 });
+          break;
+        case "explode":
+          this.burst({ duration: 0.5, volume: 0.7, lp: 900 });
+          this.blip({ wave: "sawtooth", freq: 120, freqEnd: 30, duration: 0.4, volume: 0.7 });
+          break;
+        case "missile":
+          this.burst({ duration: 0.3, volume: 0.4, hp: 800 });
+          this.blip({ wave: "sawtooth", freq: 300, freqEnd: 900, duration: 0.25, volume: 0.4 });
+          break;
+      }
+    }
+    static registerPreset(name, fn) {
+      _Sfx.customPresets[name] = fn;
+    }
+    /**
+     * Legacy single-voice API (kept for existing callers): wraps the notes in a
+     * one-track Song. `stepMs` is the per-note interval.
+     */
+    startMusic(notes, stepMs = 140, opts = {}) {
+      this.playSong({ stepMs, tracks: [{ wave: opts.wave ?? "triangle", notes, gain: 0.3 }] });
+    }
+    /** Start a looping multi-voice song. Replaces any current song. */
+    playSong(song) {
+      this.stopMusic();
+      this.song = song;
+      this.step = 0;
+      const ctx2 = this.ensure();
+      if (!ctx2) return;
+      this.nextTime = ctx2.currentTime + 0.06;
+      this.timer = window.setInterval(() => this.pump(), 25);
+      this.pump();
+    }
+    stopMusic() {
+      if (this.timer !== null) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+      this.song = null;
+    }
+    get musicPlaying() {
+      return this.song !== null;
+    }
+    /** schedule ahead ~120ms; skipped while the context is suspended (no gesture yet) */
+    pump() {
+      const ctx2 = this.ctx;
+      const song = this.song;
+      if (!ctx2 || !song || !this.musicGain) return;
+      if (ctx2.state !== "running") return;
+      const horizon = ctx2.currentTime + 0.12;
+      while (this.nextTime < horizon) {
+        this.scheduleStep(song, this.step, this.nextTime);
+        this.step += 1;
+        this.nextTime += song.stepMs / 1e3;
+      }
+    }
+    scheduleStep(song, step, t) {
+      const ctx2 = this.ctx;
+      const len = song.tracks.reduce((m, tr) => Math.max(m, tr.notes.length), song.drums ? song.drums.steps.length : 0);
+      if (len === 0) return;
+      const s = step % len;
+      for (const tr of song.tracks) {
+        const f0 = tr.notes[s % tr.notes.length];
+        if (!f0) continue;
+        const freq = semitone(f0, tr.shift ?? 0);
+        const osc = ctx2.createOscillator();
+        const gain = ctx2.createGain();
+        osc.type = tr.wave;
+        osc.frequency.setValueAtTime(freq, t);
+        const dur = song.stepMs / 1e3 * (tr.gate ?? 0.9);
+        const g = tr.gain ?? 0.22;
+        gain.gain.setValueAtTime(1e-4, t);
+        gain.gain.linearRampToValueAtTime(g, t + 8e-3);
+        gain.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+        let node = osc;
+        if (tr.lp) {
+          const f = ctx2.createBiquadFilter();
+          f.type = "lowpass";
+          f.frequency.value = tr.lp;
+          node.connect(f);
+          node = f;
+        }
+        node.connect(gain).connect(this.musicGain);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      }
+      if (song.drums) {
+        const ch = song.drums.steps[s % song.drums.steps.length];
+        const dg = song.drums.gain ?? 0.5;
+        if (ch === "k") this.drumKick(t, dg);
+        else if (ch === "s") this.drumSnare(t, dg * 0.7);
+        else if (ch === "h") this.drumHat(t, dg * 0.35);
+      }
+    }
+    drumKick(t, g) {
+      const ctx2 = this.ctx;
+      const osc = ctx2.createOscillator();
+      const gain = ctx2.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.13);
+      osc.connect(gain).connect(this.musicGain);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    }
+    drumSnare(t, g) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 1800;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.09);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.1);
+    }
+    drumHat(t, g) {
+      const ctx2 = this.ctx;
+      const buf = this.noise();
+      if (!buf) return;
+      const src = ctx2.createBufferSource();
+      src.buffer = buf;
+      const f = ctx2.createBiquadFilter();
+      f.type = "highpass";
+      f.frequency.value = 7e3;
+      const gain = ctx2.createGain();
+      gain.gain.setValueAtTime(g, t);
+      gain.gain.exponentialRampToValueAtTime(1e-4, t + 0.035);
+      src.connect(f).connect(gain).connect(this.musicGain);
+      src.start(t);
+      src.stop(t + 0.05);
+    }
+  };
+  __publicField(_Sfx, "customPresets", {});
+  var Sfx = _Sfx;
+
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/sim.ts
+  var PANES = [
+    { key: "farm", title: "FARMLAND" },
+    { key: "feed", title: "FEEDLOT" },
+    { key: "rest", title: "RESTAURANT" },
+    { key: "hq", title: "HQ" }
+  ];
+  function initialState() {
+    return {
+      cash: 500,
+      rep: 70,
+      backlash: 0,
+      crops: 20,
+      cattle: 10,
+      patties: 10,
+      demand: 1,
+      boardPressure: 0,
+      disease: 0,
+      over: false,
+      overReason: "",
+      t: 0,
+      rates: { crop: 1.2, herd: 0.3, patty: 0.9, sell: 1, profitPerBurger: 5, overhead: 4 },
+      dirty: { deforest: 0, cheapFeed: 0, cutCorners: 0 },
+      lastProfit: 0
+    };
+  }
+  var Sim = class {
+    constructor() {
+      __publicField(this, "s", initialState());
+      /** timestamped event log, newest first (capped) */
+      __publicField(this, "events", []);
+      /** actions per pane — labels are Burger Tycoon-safe (no McD marks) */
+      __publicField(this, "actions", {
+        farm: [
+          { label: "Sow soy field (+15 crops)", dirty: false, run: (s) => {
+            s.crops += 15;
+          } },
+          { label: "Buy cattle (+5 head, -$80)", dirty: false, run: (s) => {
+            if (s.cash >= 80) {
+              s.cash -= 80;
+              s.cattle += 5;
+            }
+          } },
+          { label: "DIRTY: Bulldoze rainforest (2.2x crops, +backlash)", dirty: true, run: (s) => {
+            s.dirty.deforest = s.dirty.deforest ? 0 : 1;
+          } }
+        ],
+        feed: [
+          { label: "Emergency slaughter (+4 patties, -2 cattle)", dirty: false, run: (s) => {
+            if (s.cattle >= 2) {
+              s.cattle -= 2;
+              s.patties += 4;
+            }
+          } },
+          { label: "DIRTY: Cheap feed (1.8x patties, disease risk)", dirty: true, run: (s) => {
+            s.dirty.cheapFeed = s.dirty.cheapFeed ? 0 : 1;
+          } }
+        ],
+        rest: [
+          { label: "Promo push (+0.3 demand, -$40)", dirty: false, run: (s) => {
+            if (s.cash >= 40) {
+              s.cash -= 40;
+              s.demand = Math.min(3, s.demand + 0.3);
+            }
+          } },
+          { label: "DIRTY: Cut corners (1.6x margin, +backlash)", dirty: true, run: (s) => {
+            s.dirty.cutCorners = s.dirty.cutCorners ? 0 : 1;
+          } }
+        ],
+        hq: [
+          { label: "Marketing campaign (+0.6 demand, -$120)", dirty: false, run: (s) => {
+            if (s.cash >= 120) {
+              s.cash -= 120;
+              s.demand = Math.min(3, s.demand + 0.6);
+            }
+          } },
+          { label: "PR spin (-15 backlash, -$100)", dirty: false, run: (s) => {
+            if (s.cash >= 100) {
+              s.cash -= 100;
+              s.backlash = Math.max(0, s.backlash - 15);
+            }
+          } },
+          { label: "DIRTY: Bribe officials (-25 backlash, -$200, -4 rep)", dirty: true, run: (s) => {
+            if (s.cash >= 200) {
+              s.cash -= 200;
+              s.backlash = Math.max(0, s.backlash - 25);
+              s.rep -= 4;
+            }
+          } }
+        ]
+      });
+    }
+    reset() {
+      this.s = initialState();
+      this.events = [];
+      this.log("New run \u2014 four panes, one economy.");
+    }
+    log(m) {
+      this.events.unshift(`[${this.s.t.toFixed(0)}s] ${m}`);
+      if (this.events.length > 14) this.events.length = 14;
+    }
+    act(pane2, idx) {
+      const a = this.actions[pane2][idx];
+      if (!a || this.s.over) return null;
+      const before = JSON.stringify(this.s);
+      a.run(this.s);
+      if (JSON.stringify(this.s) === before) return null;
+      this.log(a.label);
+      return a.label;
+    }
+    tick(dt) {
+      const s = this.s;
+      if (s.over) return;
+      s.t += dt;
+      const d = s.dirty;
+      const cropRate = s.rates.crop * (d.deforest ? 2.2 : 1);
+      s.crops += cropRate * dt;
+      if (s.crops > 1 && s.cattle > 0) {
+        const graze = Math.min(s.crops, s.rates.herd * dt * 2);
+        s.crops -= graze;
+        s.cattle += s.rates.herd * dt;
+      }
+      const capacity = s.rates.patty * (d.cheapFeed ? 1.8 : 1);
+      const pattyRate = Math.min(s.cattle * 0.5, s.crops * 0.5, capacity);
+      if (pattyRate > 0) {
+        s.patties += pattyRate * dt;
+        s.cattle -= pattyRate * 0.5 * dt;
+        s.crops -= pattyRate * 0.5 * dt;
+      }
+      if (d.cheapFeed) s.disease += 0.6 * dt;
+      if (s.disease > 20) {
+        s.disease = 0;
+        s.cattle *= 0.5;
+        s.rep -= 12;
+        s.backlash += 15;
+        this.log("DISEASE OUTBREAK: herd culled, rep -12");
+      }
+      const sellRate = Math.min(s.patties, s.rates.sell * s.demand * (d.cutCorners ? 1.5 : 1));
+      if (sellRate > 0) {
+        s.patties -= sellRate * dt;
+        const margin = s.rates.profitPerBurger * (d.cutCorners ? 1.6 : 1);
+        const earn = sellRate * margin * dt;
+        s.cash += earn;
+        s.lastProfit = earn / dt;
+      } else s.lastProfit = 0;
+      s.cash -= s.rates.overhead * dt;
+      const stall = s.lastProfit <= s.rates.overhead ? 1.4 : 0.4;
+      s.boardPressure += stall * dt * (s.lastProfit > s.rates.overhead * 2 ? -1 : 1);
+      s.boardPressure = Math.max(0, s.boardPressure);
+      if (s.boardPressure > 100) {
+        s.cash -= 60;
+        s.boardPressure = 40;
+        this.log("BOARD INTERVENTION: emergency loan cost -$60");
+      }
+      let bl = 0;
+      if (d.deforest) bl += 1.2;
+      if (d.cheapFeed) bl += 0.8;
+      if (d.cutCorners) bl += 1;
+      s.backlash += (bl - 0.35) * dt;
+      s.backlash = Math.max(0, Math.min(100, s.backlash));
+      if (s.backlash > 60) s.rep -= 1.5 * dt;
+      if (s.backlash > 85) s.rep -= 3 * dt;
+      s.rep = Math.max(0, Math.min(100, s.rep));
+      if (s.rep <= 0) return this.gameOver("REPUTATION COLLAPSE \u2014 activists shut you down");
+      if (s.cash <= 0) {
+        s.cash = 0;
+        return this.gameOver("BANKRUPT \u2014 overhead + board ate the company");
+      }
+    }
+    gameOver(why) {
+      this.s.over = true;
+      this.s.overReason = why;
+      this.log("GAME OVER: " + why);
+    }
+  };
+
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/icons.ts
+  function buildSprite(size, pixels) {
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const g = c.getContext("2d");
+    const u = size / 16;
+    for (const [col, x, y, w, h] of pixels) {
+      g.fillStyle = col;
+      g.fillRect(Math.round(x * u), Math.round(y * u), Math.round(w * u), Math.round(h * u));
+    }
+    return c;
+  }
+  var SPRITES = {};
+  var SIZE = 32;
+  var SIZES = [16, 24, 32];
+  var DARK = "#3a2d1e";
+  var MID = "#6b543a";
+  var CREAM = "#f4eddf";
+  SPRITES.farm = SIZES.map(() => buildSprite(SIZE, [
+    ["#8cb86a", 0, 12, 16, 4],
+    // grass strip
+    ["#b03a2e", 4, 6, 8, 6],
+    // barn body
+    ["#7c241a", 7, 8, 2, 4],
+    // barn door
+    ["#e8e0d0", 4, 5, 8, 1],
+    // barn roof eave
+    ["#b03a2e", 5, 2, 6, 4],
+    // roof block
+    ["#e8e0d0", 5, 2, 6, 1],
+    // roof top edge
+    ["#b03a2e", 6, 0, 4, 2],
+    // roof peak
+    ["#c9cdd3", 13, 3, 2, 9],
+    // silo
+    ["#8d939b", 13, 2, 2, 1],
+    // silo cap
+    ["#e8e0d0", 1, 13, 5, 1],
+    // furrow rows
+    ["#e8e0d0", 7, 14, 5, 1],
+    [DARK, 7, 8, 1, 1]
+    // door knob
+  ]));
+  SPRITES.feed = SIZES.map(() => buildSprite(SIZE, [
+    ["#e8e0d0", 3, 3, 10, 10],
+    // head
+    ["#b3764a", 3, 3, 4, 3],
+    // left patch
+    ["#b3764a", 9, 7, 4, 3],
+    // right patch
+    ["#e8e0d0", 1, 1, 3, 3],
+    // left horn
+    ["#e8e0d0", 12, 1, 3, 3],
+    // right horn
+    [DARK, 1, 1, 3, 1],
+    // horn tips
+    [DARK, 12, 1, 3, 1],
+    ["#f0a0a8", 5, 10, 6, 3],
+    // muzzle
+    [DARK, 6, 11, 1, 1],
+    // nostrils
+    [DARK, 9, 11, 1, 1],
+    [DARK, 5, 5, 2, 2],
+    // eyes
+    [DARK, 9, 5, 2, 2]
+  ]));
+  SPRITES.rest = SIZES.map(() => buildSprite(SIZE, [
+    ["#e2a44a", 3, 2, 10, 4],
+    // top bun
+    [CREAM, 5, 3, 1, 1],
+    // sesame
+    [CREAM, 8, 2, 1, 1],
+    [CREAM, 10, 3, 1, 1],
+    ["#6fae4e", 3, 6, 10, 1],
+    // lettuce
+    ["#f0c040", 3, 7, 10, 1],
+    // cheese
+    ["#6b3b22", 3, 8, 10, 2],
+    // patty
+    ["#e2a44a", 3, 10, 10, 3],
+    // bottom bun
+    [MID, 0, 13, 16, 1],
+    // counter top
+    [DARK, 1, 14, 14, 2]
+    // counter front
+  ]));
+  SPRITES.hq = SIZES.map(() => buildSprite(SIZE, [
+    ["#7f95ad", 4, 0, 8, 13],
+    // tower
+    ["#4a6fa5", 4, 0, 8, 1],
+    // roof band
+    ["#cfe3f4", 5, 2, 2, 2],
+    // windows
+    ["#cfe3f4", 9, 2, 2, 2],
+    ["#cfe3f4", 5, 5, 2, 2],
+    ["#cfe3f4", 9, 5, 2, 2],
+    ["#cfe3f4", 5, 8, 2, 2],
+    ["#cfe3f4", 9, 8, 2, 2],
+    ["#2b3a4a", 7, 11, 2, 2],
+    // door
+    ["#4a4a4a", 2, 13, 12, 1],
+    // ground line
+    ["#9a8f7d", 0, 14, 16, 2]
+    // pavement
+  ]));
+  function drawIcon(g, key, x, y, size = 32) {
+    const idx = size <= 16 ? 0 : size <= 24 ? 1 : 2;
+    const src = SPRITES[key][idx] ?? SPRITES[key][2];
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = "rgba(0,0,0,0.15)";
+    g.fillRect(x + 2, y + 2, size, size);
+    g.drawImage(src, x, y, size, size);
+    g.restore();
+  }
+  var wordmarkCache = null;
+  var GLYPHS = {
+    A: ["01110", "10001", "11111", "10001", "10001"],
+    B: ["11110", "10001", "11110", "10001", "11110"],
+    C: ["01111", "10000", "10000", "10000", "01111"],
+    E: ["11111", "10000", "11110", "10000", "11111"],
+    G: ["01111", "10000", "10011", "10001", "01110"],
+    N: ["10001", "11001", "10101", "10011", "10001"],
+    O: ["01110", "10001", "10001", "10001", "01110"],
+    R: ["11110", "10001", "11110", "10100", "10010"],
+    T: ["11111", "00100", "00100", "00100", "00100"],
+    U: ["10001", "10001", "10001", "10001", "01110"],
+    Y: ["10001", "01010", "00100", "00100", "00100"]
+  };
+  function drawWordmark(g, x, y, height = 18) {
+    if (!wordmarkCache) {
+      const px = 2;
+      const text = "BURGER TYCOON";
+      let cells = 0;
+      for (const ch of text) cells += GLYPHS[ch] ? 6 : 3;
+      cells -= 3;
+      const w2 = cells * px;
+      const h = 5 * px + 4;
+      wordmarkCache = document.createElement("canvas");
+      wordmarkCache.width = w2;
+      wordmarkCache.height = h;
+      const c = wordmarkCache.getContext("2d");
+      let cx = 0;
+      for (const ch of text) {
+        const glyph = GLYPHS[ch];
+        if (!glyph) {
+          cx += 3 * px;
+          continue;
+        }
+        const colors = {
+          B: "#b03a2e",
+          U: "#e2a44a",
+          R: "#6fae4e",
+          G: "#4a6fa5",
+          E: "#b03a2e",
+          T: "#e2a44a",
+          Y: "#6fae4e",
+          C: "#4a6fa5",
+          O: "#e2a44a",
+          N: "#b03a2e",
+          A: "#6fae4e"
+        };
+        const fill = colors[ch] ?? "#b03a2e";
+        glyph.forEach((row, ry) => {
+          [...row].forEach((bit, rx) => {
+            if (bit !== "1") return;
+            c.fillStyle = "rgba(58,45,30,0.55)";
+            c.fillRect(cx + rx * px + 1, ry * px + 1, px, px);
+            c.fillStyle = fill;
+            c.fillRect(cx + rx * px, ry * px, px, px);
+          });
+        });
+        cx += 6 * px;
+      }
+      c.fillStyle = "#3a2d1e";
+      c.fillRect(0, 5 * px + 2, w2, 2);
+    }
+    const scale = height / wordmarkCache.height;
+    const w = wordmarkCache.width * scale;
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.drawImage(wordmarkCache, x, y, w, height);
+    g.restore();
+  }
+
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/main.ts
+  var W = 960;
+  var H = 420;
+  var wrap = document.getElementById("wrap");
+  var hudEl = document.getElementById("hud");
+  var tabsEl = document.getElementById("tabs");
+  var logEl = document.getElementById("log");
+  var badgeEl = document.querySelector(".badge");
+  var muteBtn = document.getElementById("mute");
+  var cv = document.createElement("canvas");
+  cv.width = W;
+  cv.height = H;
+  wrap.insertBefore(cv, logEl);
+  var ctx = cv.getContext("2d");
+  var cachedScale = 1;
+  var toLogical = (cx, cy) => ({ x: cx / cachedScale, y: cy / cachedScale });
+  var input = new Input();
+  input.attach(cv, toLogical);
+  var sfx = new Sfx();
+  input.setKeymaps({ p1: { Digit4: "action" } });
+  if (muteBtn) {
+    const paint = () => {
+      muteBtn.textContent = sfx.muted ? "SOUND OFF" : "SOUND ON";
+    };
+    muteBtn.addEventListener("click", () => {
+      sfx.muted = !sfx.muted;
+      paint();
+    });
+    paint();
+  }
+  function layout() {
+    const vp = viewport();
+    const badgeH = badgeEl?.offsetHeight ?? 0;
+    if (muteBtn) muteBtn.style.top = `${badgeH + 4}px`;
+    const chromeH = hudEl.offsetHeight + tabsEl.offsetHeight + logEl.offsetHeight;
+    const avail = { width: vp.width, height: vp.height - badgeH - chromeH };
+    const s = fitIntegerScale(W, H, avail, 4);
+    const off = letterboxOffset(W, H, s, avail);
+    cachedScale = s;
+    wrap.style.width = `${W * s}px`;
+    wrap.style.left = `${off.x}px`;
+    wrap.style.top = `${off.y + badgeH}px`;
+    cv.style.width = `${W * s}px`;
+    cv.style.height = `${H * s}px`;
+  }
+  window.addEventListener("resize", layout);
+  var sim = new Sim();
+  sim.reset();
+  var pane = 0;
+  var best = load("burger-tycoon", "best-time", 0);
+  var musicStarted = false;
+  var prevBacklash = 0;
+  var renderedEvents = "";
+  var hits = [];
+  PANES.forEach((p, i) => {
+    const b = document.createElement("button");
+    b.textContent = `${i + 1} ${p.title}`;
+    b.addEventListener("click", () => {
+      pane = i;
+      sfx.preset("ui");
+    });
+    tabsEl.appendChild(b);
+  });
+  function setPane(i) {
+    pane = Math.max(0, Math.min(PANES.length - 1, i));
+  }
+  function startMusicOnce() {
+    if (musicStarted) return;
+    musicStarted = true;
+    sfx.startMusic([196, 0, 0, 147, 0, 0, 165, 0, 196, 0, 0, 131, 0, 0, 0, 0], 320);
+  }
+  function restart() {
+    sim.reset();
+    prevBacklash = 0;
+    sfx.preset("ui");
+  }
+  function pollInput() {
+    const p = input.pointer;
+    if (input.wasPressed("slot1")) setPane(0);
+    else if (input.wasPressed("slot2")) setPane(1);
+    else if (input.wasPressed("slot3")) setPane(2);
+    else if (input.wasPressed("action")) setPane(3);
+    if (p.tapped) {
+      startMusicOnce();
+      if (sim.s.over) {
+        restart();
+      } else {
+        for (const h of hits) {
+          if (p.x > h.x && p.x < h.x + h.w && p.y > h.y && p.y < h.y + h.h) {
+            h.fn();
+            break;
+          }
+        }
+      }
+    }
+    if (sim.s.over && (input.wasPressed("fire") || input.wasPressed("action"))) restart();
+  }
+  function meter(x, y, w, v, max, col, label) {
+    ctx.fillStyle = "#999";
+    ctx.fillRect(x, y, w, 14);
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, w * Math.min(1, v / max), 14);
+    ctx.fillStyle = "#222";
+    ctx.font = "12px monospace";
+    ctx.fillText(`${label} ${v.toFixed(0)}`, x + 4, y + 11);
+  }
+  function drawPane(key, index, x, y, w, h, grid) {
+    const s = sim.s;
+    const active = index === pane;
+    ctx.fillStyle = active && grid ? "#d7e7f7" : "#f4eddf";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = active && grid ? "#4a6fa5" : "#9a8f7d";
+    ctx.lineWidth = active && grid ? 3 : 1;
+    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.fillStyle = "#222";
+    ctx.font = "bold 16px monospace";
+    ctx.fillText(`${index + 1} ${PANES[index].title}`, x + 14, y + 25);
+    const iconSize = grid ? 24 : 32;
+    drawIcon(ctx, key, x + w - iconSize - 10, y + 6, iconSize);
+    const actions = sim.actions[key];
+    const actionH = grid ? 34 : 48;
+    const actionGap = grid ? 7 : 16;
+    const actionW = grid ? Math.min(270, w - 28) : 560;
+    actions.forEach((a, i) => {
+      const ay = y + 38 + i * (actionH + actionGap);
+      ctx.fillStyle = a.dirty ? "#8b2c2c" : "#4a6fa5";
+      ctx.fillRect(x + 14, ay, actionW, actionH);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 14, ay, actionW, actionH);
+      ctx.clip();
+      ctx.fillStyle = "#fff";
+      ctx.font = `${grid ? 9 : 15}px monospace`;
+      ctx.fillText(a.label, x + 20, ay + (grid ? 21 : 30));
+      ctx.restore();
+      hits.push({
+        x: x + 14,
+        y: ay,
+        w: actionW,
+        h: actionH,
+        fn: () => {
+          if (sim.act(key, i) !== null) sfx.preset("ui");
+        }
+      });
+    });
+    const mx = grid ? x + actionW + 14 : x + 596;
+    const mw = grid ? w - (mx - x) - 14 : 300;
+    ctx.font = "11px monospace";
+    ctx.fillStyle = "#222";
+    if (key === "farm") {
+      meter(mx, y + 44, mw, s.crops, 100, "#2b8a3e", "CROPS");
+      meter(mx, y + 68, mw, s.cattle, 50, "#a0522d", "CATTLE");
+      if (s.dirty.deforest) ctx.fillText("rainforest burning\u2026", mx, y + 104);
+    } else if (key === "feed") {
+      meter(mx, y + 44, mw, s.patties, 60, "#d6336c", "PATTIES");
+      meter(mx, y + 68, mw, s.cattle, 50, "#a0522d", "CATTLE");
+      meter(mx, y + 92, mw, s.disease, 20, "#e8590c", "DISEASE");
+    } else if (key === "rest") {
+      meter(mx, y + 44, mw, s.patties, 60, "#d6336c", "PATTY STOCK");
+      meter(mx, y + 68, mw, s.demand, 3, "#1971c2", "DEMAND");
+    } else {
+      meter(mx, y + 44, mw, s.backlash, 100, "#e8590c", "BACKLASH");
+      meter(mx, y + 68, mw, s.boardPressure, 100, "#c2255c", "BOARD");
+    }
+  }
+  function draw() {
+    const s = sim.s;
+    [...tabsEl.children].forEach((b, i) => b.className = i === pane ? "on" : "");
+    hudEl.innerHTML = `<span>CASH <b>${s.cash.toFixed(0)}</b></span><span>REP <b>${s.rep.toFixed(0)}</b></span><span>BACKLASH <b>${s.backlash.toFixed(0)}</b></span><span>BOARD <b>${s.boardPressure.toFixed(0)}</b></span><span>DEMAND <b>${s.demand.toFixed(1)}x</b></span><span>PROFIT <b>${s.lastProfit.toFixed(1)}/s</b></span><span>OVERHEAD <b>-${s.rates.overhead}/s</b></span><span>TIME <b>${s.t.toFixed(0)}s</b></span><span>BEST <b>${best.toFixed(0)}s</b></span>`;
+    const newestEvent = sim.events[0] ?? "";
+    if (renderedEvents !== newestEvent) {
+      renderedEvents = newestEvent;
+      logEl.innerHTML = sim.events.map((e) => `<div>${e}</div>`).join("");
+    }
+    ctx.fillStyle = "#e8e0d0";
+    ctx.fillRect(0, 0, W, H);
+    hits = [];
+    const grid = cv.clientWidth >= 900;
+    if (grid) {
+      const pw = W / 2;
+      const ph = 190;
+      PANES.forEach((p, i) => drawPane(p.key, i, i % 2 * pw, Math.floor(i / 2) * ph, pw, ph, true));
+      ctx.fillStyle = "#666";
+      ctx.font = "11px monospace";
+      ctx.fillText("Grid view \xB7 keys 1-4 highlight panes \xB7 click actions \xB7 sim runs while idle", 14, H - 12);
+      drawWordmark(ctx, W - 236, H - 32, 18);
+    } else {
+      drawPane(PANES[pane].key, pane, 0, 0, W, H, false);
+      ctx.fillStyle = "#666";
+      ctx.font = "12px monospace";
+      ctx.fillText("Click actions \xB7 keys 1-4 switch panes \xB7 sim runs while idle \u2014 INTERNAL replica", 24, H - 14);
+    }
+    if (s.over) {
+      ctx.fillStyle = "rgba(0,0,0,.6)";
+      ctx.fillRect(0, 140, W, 140);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 26px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("GAME OVER", W / 2, 190);
+      ctx.font = "15px monospace";
+      ctx.fillText(s.overReason, W / 2, 220);
+      ctx.fillText(`survived ${s.t.toFixed(0)}s \xB7 best ${best.toFixed(0)}s \u2014 click / tap / SPACE to restart`, W / 2, 250);
+      ctx.textAlign = "left";
+    }
+  }
+  var last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.25, (now - last) / 1e3);
+    last = now;
+    pollInput();
+    input.endFrame();
+    sim.tick(dt);
+    if (sim.s.backlash > 60 && prevBacklash <= 60) sfx.preset("hit");
+    prevBacklash = sim.s.backlash;
+    if (sim.s.over && sim.s.t > best) {
+      best = sim.s.t;
+      save("burger-tycoon", "best-time", best);
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  layout();
+  requestAnimationFrame(frame);
+  if (new URLSearchParams(location.search).has("debug")) {
+    window.__maga = { sim, setPane, input, sfx };
+  }
+})();
+
+</script>
+</body>
+</html>

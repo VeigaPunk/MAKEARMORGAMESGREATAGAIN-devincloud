@@ -1,3 +1,23 @@
+ results (to fill at ship)
+
+```bash
+# pending
+```
+
+## Known deferrals (to fill at ship)
+
+- pending
+
+## Provenance (to fill at ship)
+
+- pending
+
+---
+
+## Prior run of record — release 1.1 (zcode-vanilla substrate, shipped 2026-09-22)
+
+_Preserved verbatim from that run for continuity; the current run's verification above is the living head of this record._
+
 # Chicken Invaders (+ Cluck Horizon pack) — ship record (release 1.1, 2026-09-22)
 
 Original: Chicken Invaders 2: The Next Wave (2002) — vertical shmup with
@@ -59,3 +79,4 @@ Evidence: `verification/evidence/release-r2/40..46-*.png`, `shmup-drive.log.json
 Consulted only this working copy (files, git history, prior records) and the
 original game as remembered. No external renditions consulted; no web or
 GitHub searches about this project; nothing left the working copy.
+
