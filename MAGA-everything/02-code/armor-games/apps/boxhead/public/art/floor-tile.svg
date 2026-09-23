@@ -1,20 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Arena floor tile — direct-authored, tileable 64px. Dark base matching the
-       procedural arena fill (0x101018) with a subtle 16px grid and sparse grime
-       specks; designed to sit UNDER the existing Graphics arena at low alpha so
-       gameplay readability (bullets/zombies on near-black) is preserved. -->
-  <rect width="64" height="64" fill="#101018"/>
+  <!-- Arena grime overlay — tileable 64px, TRANSPARENT base so the theme
+       floor color (warehouse/lab/yard tokens) shows through underneath.
+       Sits over the checker floor at low alpha for wear + grid texture. -->
   <!-- fine grid, 16px pitch; edges drawn so tiles stitch seamlessly -->
-  <g stroke="#191926" stroke-width="1">
+  <g stroke="#000000" stroke-opacity="0.22" stroke-width="1">
     <path d="M0 16.5 H64 M0 32.5 H64 M0 48.5 H64"/>
     <path d="M16.5 0 V64 M32.5 0 V64 M48.5 0 V64"/>
   </g>
-  <!-- seam accents on tile borders (top+left only, so tiling doesn't double up) -->
-  <g stroke="#232336" stroke-width="1">
+  <!-- seam accents on tile borders (top+left only, so tiling doesn't double) -->
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
     <path d="M0 0.5 H64 M0.5 0 V64"/>
   </g>
   <!-- grime specks: deterministic scattered dots -->
-  <g fill="#1b1b29">
+  <g fill="#000000" fill-opacity="0.28">
     <rect x="7" y="9" width="2" height="2"/>
     <rect x="23" y="3" width="1" height="1"/>
     <rect x="41" y="11" width="2" height="1"/>
@@ -32,7 +30,7 @@
     <rect x="60" y="53" width="2" height="2"/>
   </g>
   <!-- faint worn patches -->
-  <g fill="#15151f">
+  <g fill="#000000" fill-opacity="0.16">
     <rect x="18" y="34" width="6" height="3"/>
     <rect x="44" y="18" width="4" height="4"/>
     <rect x="34" y="56" width="5" height="2"/>

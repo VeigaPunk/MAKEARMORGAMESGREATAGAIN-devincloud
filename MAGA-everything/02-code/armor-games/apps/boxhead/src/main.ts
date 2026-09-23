@@ -1,11 +1,11 @@
 import { Application } from 'pixi.js';
-import { Input, Sfx, letterboxOffset, viewport } from '@maga/arcade-core';
+import { Input, Sfx, fitIntegerScale, letterboxOffset, load, save, viewport } from '@maga/arcade-core';
 import { Game } from './game';
 import { TouchControls } from './touch';
 
 /**
- * Boxhead native replica — bootstrap.
- * Fixed logical stage, proportional letterboxed scaling, unified input, synth SFX.
+ * BLOCKHEAD: ARENA NIGHTS — bootstrap.
+ * Fixed logical stage, integer letterboxed scaling, unified input, synth SFX.
  */
 
 const STAGE_W = 640;
@@ -18,7 +18,7 @@ const badgeEl = document.querySelector<HTMLElement>('.badge');
   await app.init({
     width: STAGE_W,
     height: STAGE_H,
-    background: 0x0a0a0f,
+    background: 0x0b0b0c,
     antialias: false,
     resolution: window.devicePixelRatio || 1,
     autoDensity: true,
@@ -26,18 +26,32 @@ const badgeEl = document.querySelector<HTMLElement>('.badge');
     preference: 'webgl',
   });
   document.body.appendChild(app.canvas);
-  app.canvas.tabIndex = 0;
-
 
 const input = new Input();
 const sfx = new Sfx();
-// BH-3.2 MAESTRO drop zone: mute toggle lives in page chrome, not the stage,
-// so it stays reachable on every screen including menus.
+
+// settings chrome (page-level so it stays reachable on every screen):
+// SOUND ON/OFF button + volume slider, both persisted.
 const muteBtn = document.getElementById('mute');
+const audioChrome = document.getElementById('audio');
+const volSlider = document.getElementById('vol') as HTMLInputElement | null;
+sfx.setMuted(load('boxhead', 'muted', false));
+sfx.volume = load('boxhead', 'volume', 0.7);
+if (volSlider) volSlider.value = String(Math.round(sfx.volume * 100));
+const paintMute = () => { if (muteBtn) muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON'; };
 if (muteBtn) {
-  const paint = () => { muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON'; };
-  muteBtn.addEventListener('click', () => { sfx.muted = !sfx.muted; paint(); app.canvas.focus({ preventScroll: true }); });
-  paint();
+  muteBtn.addEventListener('click', () => {
+    sfx.setMuted(!sfx.muted);
+    save('boxhead', 'muted', sfx.muted);
+    paintMute();
+  });
+  paintMute();
+}
+if (volSlider) {
+  volSlider.addEventListener('input', () => {
+    sfx.volume = Number(volSlider.value) / 100;
+    save('boxhead', 'volume', sfx.volume);
+  });
 }
 
 let cachedScale = 1;
@@ -56,27 +70,34 @@ const touch = new TouchControls(STAGE_W, STAGE_H, app.canvas, toLogical);
 input.attach(app.canvas, toLogical);
 
 const game = new Game(app, input, sfx, touch);
-document.getElementById('pause')?.addEventListener('click', () => { game.togglePause(); app.canvas.focus({ preventScroll: true }); });
-window.addEventListener('blur', () => game.pauseForFocus());
-document.addEventListener('visibilitychange', () => { if (document.hidden) game.pauseForFocus(); });
-
 
 // PROOF/debug hook: open with ?debug to expose state for automated acceptance
 if (new URLSearchParams(location.search).has('debug')) {
-  (window as unknown as { __maga: unknown }).__maga = { game, input, touch };
+  (window as unknown as { __maga: unknown }).__maga = {
+    game,
+    input,
+    touch,
+    // read-only state hooks — verification depends on these
+    get state() { return game.stateName; },
+    get mode() { return game.modeName; },
+    get wave() { return game.waveNumber; },
+    get score() { return game.scoreValue; },
+    get mult() { return game.multValue; },
+    get weapon() { return game.weaponSnapshot; },
+    get players() { return game.playerSnapshot; },
+    get enemiesAlive() { return game.enemiesAlive; },
+    get rooms() { return game.roomsCount; },
+  };
 }
 
 function layout(): void {
   const vp = viewport();
   const badgeH = badgeEl?.offsetHeight ?? 0;
-  if (muteBtn) muteBtn.style.top = '8px';
-  const pauseBtn = document.getElementById('pause');
-  if (pauseBtn) pauseBtn.style.top = '8px';
+  if (audioChrome) audioChrome.style.top = `${badgeH + 4}px`;
   const avail = { width: vp.width, height: vp.height - badgeH };
-  const s = Math.min(avail.width / STAGE_W, avail.height / STAGE_H, 4);
+  const s = fitIntegerScale(STAGE_W, STAGE_H, avail, 4);
   const off = letterboxOffset(STAGE_W, STAGE_H, s, avail);
   cachedScale = s;
-  touch.setScale(s);
   const cvs = app.canvas as HTMLCanvasElement;
   cvs.style.width = `${STAGE_W * s}px`;
   cvs.style.height = `${STAGE_H * s}px`;

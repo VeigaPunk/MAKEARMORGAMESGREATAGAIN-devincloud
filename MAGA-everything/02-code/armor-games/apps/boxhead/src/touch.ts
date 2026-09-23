@@ -1,10 +1,12 @@
 import { Container, Graphics } from 'pixi.js';
+import { PAL } from './palette';
 
 /**
- * BH-2.1 touch layout C (solo mobile): virtual stick bottom-left + FIRE
- * button bottom-right, drawn in stage logical units. Shown only on coarse
- * pointers (or after the first touch), semi-transparent so the arena stays
- * readable. Auto-aim stays in game.ts — the fire button just holds 'fire'.
+ * Touch layout (solo mobile): virtual stick bottom-left + FIRE button
+ * bottom-right + WPN cycle button above it, drawn in stage logical units.
+ * Shown only on coarse pointers (or after the first touch), semi-transparent
+ * so the arena stays readable. Auto-aim stays in game.ts — the fire button
+ * just holds 'fire'.
  *
  * Zones claim pointer events BEFORE Input's canvas-level tap handling would
  * misread them as aim taps: a pointer down inside a zone never becomes
@@ -14,6 +16,7 @@ import { Container, Graphics } from 'pixi.js';
 
 const STICK_R = 34;
 const FIRE_R = 26;
+const WPN_R = 15;
 
 export class TouchControls {
   readonly view = new Container();
@@ -21,6 +24,7 @@ export class TouchControls {
   stick: { x: number; y: number } | null = null;
   /** true while the fire button is held */
   fire = false;
+  private weaponPressed = false;
 
   private shown = false;
   private coarse = false;
@@ -29,12 +33,13 @@ export class TouchControls {
   private stickPointer = -1;
   private stickOrigin = { x: 0, y: 0 };
   private firePointer = -1;
-  private baseAlpha = 0.6;
-  private displayScale = 1;
+  private wpnPointer = -1;
+  private baseAlpha = 0.42;
 
   private stickBase!: Graphics;
   private stickKnob!: Graphics;
   private fireBtn!: Graphics;
+  private wpnBtn!: Graphics;
 
   constructor(
     private stageW: number,
@@ -50,7 +55,6 @@ export class TouchControls {
       return toLogical(e.clientX - r.left, e.clientY - r.top);
     };
     canvas.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'touch') return;
       this.coarse = this.coarse || e.pointerType === 'touch';
       if (!this.visibleTarget()) return;
       const p = toLocal(e);
@@ -64,6 +68,12 @@ export class TouchControls {
       } else if (this.inFireZone(p)) {
         this.firePointer = e.pointerId;
         this.fire = true;
+        try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic/edge pointers */ }
+        e.stopImmediatePropagation();
+      } else if (this.inWeaponZone(p)) {
+        this.wpnPointer = e.pointerId;
+        this.weaponPressed = true;
+        this.drawWeapon();
         try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic/edge pointers */ }
         e.stopImmediatePropagation();
       }
@@ -98,32 +108,33 @@ export class TouchControls {
         this.fire = false;
         this.drawFire();
       }
+      if (e.pointerId === this.wpnPointer) {
+        e.stopImmediatePropagation();
+        this.wpnPointer = -1;
+        this.drawWeapon();
+      }
     };
     // Release can occur outside the canvas when a finger leaves the viewport.
     window.addEventListener('pointerup', release);
     window.addEventListener('pointercancel', release);
-    canvas.addEventListener('lostpointercapture', release);
-    window.addEventListener('blur', () => this.reset());
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.reset(); });
+  }
+
+  /** weapon-cycle tap — consumed once per press by the Game */
+  consumeWeaponSwitch(): boolean {
+    const v = this.weaponPressed;
+    this.weaponPressed = false;
+    return v;
   }
 
   /** gameplay gate — menus/end screens leave every touch to Input (D-14) */
   setActive(v: boolean): void {
     this.active = v;
-    if (!v) this.reset();
     this.applyVisibility();
   }
 
-  private reset(): void {
-    this.stick = null; this.fire = false; this.stickPointer = -1; this.firePointer = -1;
-    this.drawStick(); this.drawFire();
-  }
-
-  setScale(scale: number): void { this.displayScale = Math.min(1, Math.max(0.2, scale)); this.drawFire(); }
-  private fireRadius() { return Math.max(FIRE_R, 22 / this.displayScale); }
-
   private stickHome() { return { x: 78, y: this.stageH - 74 }; }
   private fireHome() { return { x: this.stageW - 66, y: this.stageH - 70 }; }
+  private weaponHome() { return { x: this.stageW - 42, y: this.stageH - 132 }; }
 
   private inStickZone(p: { x: number; y: number }): boolean {
     const h = this.stickHome();
@@ -132,7 +143,12 @@ export class TouchControls {
 
   private inFireZone(p: { x: number; y: number }): boolean {
     const h = this.fireHome();
-    return Math.hypot(p.x - h.x, p.y - h.y) < this.fireRadius() + 12;
+    return Math.hypot(p.x - h.x, p.y - h.y) < FIRE_R * 1.9;
+  }
+
+  private inWeaponZone(p: { x: number; y: number }): boolean {
+    const h = this.weaponHome();
+    return Math.hypot(p.x - h.x, p.y - h.y) < WPN_R * 1.9;
   }
 
   private visibleTarget(): boolean {
@@ -143,11 +159,13 @@ export class TouchControls {
     this.stickBase = new Graphics();
     this.stickKnob = new Graphics();
     this.fireBtn = new Graphics();
-    this.view.addChild(this.stickBase, this.stickKnob, this.fireBtn);
+    this.wpnBtn = new Graphics();
+    this.view.addChild(this.stickBase, this.stickKnob, this.fireBtn, this.wpnBtn);
     this.view.visible = false;
     this.view.eventMode = 'none'; // pure display; canvas-level zones own hit tests
     this.drawStick();
     this.drawFire();
+    this.drawWeapon();
     this.applyVisibility();
   }
 
@@ -155,22 +173,32 @@ export class TouchControls {
     const h = this.stickHome();
     this.stickBase.clear()
       .circle(h.x, h.y, STICK_R).stroke({ width: 2, color: 0x8a8aa0, alpha: 0.9 })
-      .circle(h.x, h.y, STICK_R).fill({ color: 0x30303f, alpha: 0.5 });
+      .circle(h.x, h.y, STICK_R).fill({ color: PAL.panel, alpha: 0.5 });
     const kx = h.x + (this.stick?.x ?? 0) * STICK_R;
     const ky = h.y + (this.stick?.y ?? 0) * STICK_R;
     this.stickKnob.clear()
-      .circle(kx, ky, 14).fill({ color: 0xf5c542, alpha: 0.85 }).stroke({ width: 1, color: 0x000000 });
+      .circle(kx, ky, 14).fill({ color: PAL.amber, alpha: 0.85 }).stroke({ width: 1, color: PAL.void });
   }
 
   private drawFire(): void {
     const h = this.fireHome();
     this.fireBtn.clear()
-      .circle(h.x, h.y, this.fireRadius())
-      .fill({ color: this.fire ? 0xd43a3a : 0x8a2430, alpha: 0.85 })
-      .stroke({ width: 2, color: 0xf5c542, alpha: 0.9 })
-      .circle(h.x,h.y,8).stroke({width:2,color:0xffedab})
-      .moveTo(h.x-13,h.y).lineTo(h.x+13,h.y).stroke({width:2,color:0xffedab})
-      .moveTo(h.x,h.y-13).lineTo(h.x,h.y+13).stroke({width:2,color:0xffedab});
+      .circle(h.x, h.y, FIRE_R)
+      .fill({ color: this.fire ? PAL.warn : 0x8a2430, alpha: 0.85 })
+      .stroke({ width: 2, color: PAL.amber, alpha: 0.9 });
+  }
+
+  private drawWeapon(): void {
+    const h = this.weaponHome();
+    this.wpnBtn.clear()
+      .circle(h.x, h.y, WPN_R)
+      .fill({ color: this.weaponPressed ? PAL.accentDim : PAL.panel, alpha: 0.9 })
+      .stroke({ width: 2, color: PAL.amber, alpha: 0.9 })
+      .rect(h.x - 9, h.y - 3, 18, 2).fill(PAL.ink)
+      .rect(h.x - 3, h.y - 9, 2, 10).fill(PAL.ink)
+      .rect(h.x + 4, h.y - 7, 2, 8).fill(PAL.ink)
+      .rect(h.x + 8, h.y - 5, 2, 6).fill(PAL.ink)
+      .rect(h.x - 9, h.y + 1, 8, 2).fill(PAL.ink);
   }
 
   private applyVisibility(): void {
@@ -184,7 +212,6 @@ export class TouchControls {
 
   /** call each frame; re-checks the coarse-pointer media query cheaply */
   tick(): void {
-    this.drawFire();
     this.applyVisibility();
   }
 }

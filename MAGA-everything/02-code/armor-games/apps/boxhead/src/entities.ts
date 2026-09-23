@@ -1,8 +1,12 @@
 import { Graphics } from 'pixi.js';
+import { PAL } from './palette';
+import { ENEMIES, type EnemyKind } from './world';
 
 /**
- * Boxhead entities — chunky placeholder boxes (PIXEL replaces per recipes).
- * All combat numbers are TBD ARCADE placeholders unless noted.
+ * BLOCKHEAD entities — procedural chunky-box art (PIXEL native recipes).
+ * Invulnerability is a wall-clock deadline (D-58): throttle-resume bursts
+ * cannot decay it early, so stacked movers can never multi-hit inside one
+ * resumed frame.
  */
 
 export type Vec = { x: number; y: number };
@@ -15,41 +19,42 @@ export function dist(a: Vec, b: Vec): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-const OUTLINE = { width: 1, color: 0x000000 };
+const OUTLINE = { width: 1, color: PAL.void };
 
 // --- Player ------------------------------------------------------------------
 export class Player {
   g = new Graphics();
   pos: Vec;
-  /** facing = last move direction; shots fire this way (keyboard-only combat) */
+  /** facing = last move direction; shots fire this way (keyboard combat) */
   facing: Vec = { x: 1, y: 0 };
   hp = 100;
-  ammo = 24;
-  private protectedUntil = 0;
-  get invuln(): number { return Math.max(0, (this.protectedUntil - performance.now()) / 1000); }
-  set invuln(seconds: number) { this.protectedUntil = performance.now() + Math.max(0, seconds) * 1000; }
-  speed = 125; // TBD ARCADE
+  ammo = 40;
+  speed = 130;
+  /** performance.now() ms deadline — see D-58 */
+  private invulnUntil = 0;
 
-  constructor(x: number, y: number, color = 0xe8e8f0) {
+  constructor(x: number, y: number, private accent: number) {
     this.pos = { x, y };
-    this.draw(color);
+    this.draw();
     this.g.x = x;
     this.g.y = y;
   }
 
-  draw(color: number): void {
+  private draw(): void {
     this.g.clear()
-      .ellipse(1, 5, 10, 6).fill({ color: 0x000000, alpha: 0.35 })
-      .rect(-6, 4, 5, 6).fill(0x1b2026).stroke(OUTLINE)
-      .rect(1, 4, 5, 6).fill(0x1b2026).stroke(OUTLINE)
-      .rect(-8, -5, 16, 11).fill(color).stroke(OUTLINE)
-      .rect(-4, -4, 8, 10).fill(0x465052).stroke(OUTLINE)
-      .rect(-3, -1, 6, 2).fill(0x9ead86)
-      .rect(-5, -13, 10, 9).fill(color).stroke(OUTLINE)
-      .rect(-5, -13, 10, 3).fill(0x727d79)
-      .rect(-3, -9, 6, 2).fill(0x172329)
-      .rect(5, -11, 3, 10).fill(0x2b3139).stroke(OUTLINE)
-      .rect(5, -13, 3, 3).fill(0xaab6b9);
+      .rect(-6, -4, 12, 12).fill(PAL.playerBody).stroke(OUTLINE)
+      .rect(-6, -4, 2, 12).fill(this.accent)
+      .rect(-4, -11, 8, 7).fill(PAL.playerHead).stroke(OUTLINE)
+      .rect(2, -9, 2, 2).fill(PAL.void)
+      .rect(-2, -9, 2, 2).fill(PAL.void);
+  }
+
+  setInvuln(seconds: number): void {
+    this.invulnUntil = Math.max(this.invulnUntil, performance.now() + seconds * 1000);
+  }
+
+  invulnLeft(): number {
+    return Math.max(0, (this.invulnUntil - performance.now()) / 1000);
   }
 
   move(axis: Vec, dt: number, bounds: { w: number; h: number }, solids: Rect[]): void {
@@ -73,12 +78,10 @@ export class Player {
     this.pos.y = ny;
   }
 
-  tickFlash(_dt: number): void {
-    if (this.invuln > 0) {
-      this.g.alpha = Math.sin(this.invuln * 30) > 0 ? 1 : 0.4;
-    } else {
-      this.g.alpha = 1;
-    }
+  tickFlash(): void {
+    const left = this.invulnLeft();
+    if (left > 0) this.g.alpha = Math.sin(left * 30) > 0 ? 1 : 0.4;
+    else this.g.alpha = 1;
   }
 }
 
@@ -86,28 +89,53 @@ export class Player {
 export class Zombie {
   g = new Graphics();
   hp: number;
-  speed: number; // TBD ARCADE
-  runner: boolean;
+  speed: number;
+  readonly kind: EnemyKind;
+  readonly hitR: number;
+  readonly contact: number;
+  readonly ranged: boolean;
   hitFlash = 0;
   dead = false;
+  /** devil ranged-attack cooldown */
+  fireTimer = 2;
 
-  constructor(public pos: Vec, speed: number, runner: boolean) {
-    this.speed = runner ? speed * 1.8 : speed;
-    this.hp = runner ? 1 : 2; // TBD ARCADE
-    this.runner = runner;
-    const color = runner ? 0xd43a3a : 0x6a8f3a;
-    this.g.ellipse(1, 7, 10, 5).fill({color: 0x000000, alpha: 0.4})
-      .rect(-5, 5, 4, 6).fill(0x242825).stroke(OUTLINE)
-      .rect(2, 5, 4, 6).fill(0x242825).stroke(OUTLINE)
-      .rect(-7, -4, 14, 12).fill(runner ? 0x762a30 : 0x4c5944).stroke(OUTLINE)
-      .rect(-10, -7, 3, 9).fill(color).stroke(OUTLINE)
-      .rect(7, -7, 3, 9).fill(color).stroke(OUTLINE)
-      .rect(-5, -12, 10, 9).fill(color).stroke(OUTLINE)
-      .rect(-3, -9, 2, 2).fill(0xffe69b)
-      .rect(2, -9, 2, 2).fill(0xffe69b)
-      .rect(-1, -5, 4, 1).fill(0x281d19);
+  constructor(public pos: Vec, baseSpeed: number, kind: EnemyKind) {
+    const spec = ENEMIES[kind];
+    this.kind = kind;
+    this.speed = baseSpeed * spec.speedMul;
+    this.hp = spec.hp;
+    this.hitR = spec.hitR;
+    this.contact = spec.contact;
+    this.ranged = spec.ranged;
+    this.draw();
     this.g.x = pos.x;
     this.g.y = pos.y;
+  }
+
+  private draw(): void {
+    if (this.kind === 'bruiser') {
+      this.g.rect(-11, -9, 22, 19).fill(PAL.zombieDark).stroke(OUTLINE)
+        .rect(-8, -16, 16, 9).fill(PAL.zombieDark).stroke(OUTLINE)
+        .rect(-6, -14, 3, 3).fill(PAL.zombieEye)
+        .rect(3, -14, 3, 3).fill(PAL.zombieEye)
+        .rect(-4, -1, 8, 3).fill(PAL.void);
+      return;
+    }
+    if (this.kind === 'devil') {
+      this.g.rect(-6, -5, 12, 13).fill(PAL.devil).stroke(OUTLINE)
+        .rect(-4, -12, 8, 8).fill(PAL.devil).stroke(OUTLINE)
+        .rect(-5, -15, 3, 4).fill(PAL.devilHorn)
+        .rect(2, -15, 3, 4).fill(PAL.devilHorn)
+        .rect(-3, -10, 2, 3).fill(PAL.warn)
+        .rect(1, -10, 2, 3).fill(PAL.warn);
+      return;
+    }
+    const body = this.kind === 'runner' ? PAL.runner : PAL.zombie;
+    const eye = this.kind === 'runner' ? PAL.void : PAL.zombieEye;
+    this.g.rect(-6, -4, 12, 12).fill(body).stroke(OUTLINE)
+      .rect(-4, -11, 8, 7).fill(body).stroke(OUTLINE)
+      .rect(-3, -9, 2, 2).fill(eye)
+      .rect(1, -9, 2, 2).fill(eye);
   }
 
   chase(target: Vec, dt: number, bounds: { w: number; h: number }, solids: Rect[], crowd: Zombie[]): void {
@@ -118,10 +146,11 @@ export class Zombie {
     this.step(0, vy, bounds, solids);
 
     // gentle separation so the swarm doesn't collapse into one blob
+    const sep = this.kind === 'bruiser' ? 22 : 14;
     for (const o of crowd) {
       if (o === this || o.dead) continue;
       const sd = dist(this.pos, o.pos);
-      if (sd > 0 && sd < 14) {
+      if (sd > 0 && sd < sep) {
         this.pos.x += ((this.pos.x - o.pos.x) / sd) * 20 * dt;
         this.pos.y += ((this.pos.y - o.pos.y) / sd) * 20 * dt;
       }
@@ -129,17 +158,23 @@ export class Zombie {
 
     if (this.hitFlash > 0) {
       this.hitFlash -= dt;
-      this.g.alpha = this.hitFlash > 0 ? 0.5 : 1;
+      if (this.hitFlash <= 0) {
+        this.g.alpha = 1;
+        this.g.tint = 0xffffff;
+      } else {
+        this.g.alpha = 0.75;
+        this.g.tint = 0xff8a7a; // red hit flash reads through the swarm
+      }
     }
     this.g.x = this.pos.x;
     this.g.y = this.pos.y;
-    this.g.rotation = Math.atan2(target.y - this.pos.y, target.x - this.pos.x) + Math.PI / 2;
   }
 
   private step(dx: number, dy: number, bounds: { w: number; h: number }, solids: Rect[]): void {
     const nx = this.pos.x + dx;
     const ny = this.pos.y + dy;
-    const r = { x: nx - 6, y: ny - 4, w: 12, h: 12 };
+    const box = ENEMIES[this.kind].box;
+    const r = { x: nx - box.hx, y: ny - box.hy, w: box.hx * 2, h: box.hy * 2 };
     if (nx < 16 || nx > bounds.w - 16 || ny < 16 || ny > bounds.h - 16) return;
     for (const s of solids) if (rectsOverlap(r, s)) return;
     this.pos.x = nx;
@@ -153,16 +188,35 @@ export class Zombie {
 }
 
 // --- Projectile ----------------------------------------------------------------
+export type ProjKind = 'bullet' | 'grenade' | 'rocket' | 'fireball';
+
 export class Projectile {
   g = new Graphics();
-  life = 1.4;
+  life: number;
+  /** firing player index (-1 = devil fireball) */
+  owner = 0;
+  damage = 1;
+  radius = 0;
+  aoeDamage = 0;
+  private t = 0;
 
-  constructor(public pos: Vec, public vel: Vec, kind: 'bullet' | 'grenade' = 'bullet') {
+  constructor(public pos: Vec, public vel: Vec, readonly kind: ProjKind, life: number) {
+    this.life = life;
     if (kind === 'grenade') {
-      // lobbed shell — bigger, darker, reads as AoE ordnance not a tracer
-      this.g.circle(0, 0, 4).fill(0x3a5f2a).stroke({ width: 1, color: 0x000000 });
+      this.g.circle(0, 0, 4).fill(0x3a5f2a).stroke(OUTLINE);
+    } else if (kind === 'rocket') {
+      this.g.rect(-5, -2, 10, 4).fill(PAL.barrelBand).stroke(OUTLINE)
+        .circle(4, 0, 3).fill(PAL.warn);
+      this.g.blendMode = 'normal';
+    } else if (kind === 'fireball') {
+      // devil energy ball — additive orange glow
+      this.g.circle(0, 0, 8).fill({ color: PAL.warn, alpha: 0.4 })
+        .circle(0, 0, 4.5).fill({ color: PAL.warn, alpha: 0.8 })
+        .circle(0, 0, 2.5).fill(PAL.muzzle);
+      this.g.blendMode = 'add';
     } else {
-      this.g.rect(-2, -1, 5, 2).fill(0xf5c542);
+      this.g.rect(-2, -1, 5, 2).fill(PAL.bullet)
+        .rect(-1, -0.5, 2, 1).fill(PAL.bulletCore);
     }
     this.g.x = pos.x;
     this.g.y = pos.y;
@@ -172,15 +226,21 @@ export class Projectile {
     this.pos.x += this.vel.x * dt;
     this.pos.y += this.vel.y * dt;
     this.life -= dt;
+    this.t += dt;
     this.g.x = this.pos.x;
     this.g.y = this.pos.y;
     this.g.rotation = Math.atan2(this.vel.y, this.vel.x);
+    if (this.kind === 'rocket') this.g.alpha = 0.85 + Math.sin(this.t * 42) * 0.15;
+    if (this.kind === 'fireball') {
+      const pulse = 1 + Math.sin(this.t * 18) * 0.18;
+      this.g.scale.set(pulse);
+    }
     return this.life > 0;
   }
 
   hitSolid(solids: Rect[], bounds: { w: number; h: number }): boolean {
     if (this.pos.x < 12 || this.pos.x > bounds.w - 12 || this.pos.y < 12 || this.pos.y > bounds.h - 12) return true;
-    const r = { x: this.pos.x - 2, y: this.pos.y - 1, w: 4, h: 2 };
+    const r = { x: this.pos.x - 2, y: this.pos.y - 2, w: 4, h: 4 };
     return solids.some((s) => rectsOverlap(r, s));
   }
 
@@ -189,17 +249,60 @@ export class Projectile {
   }
 }
 
-// --- AmmoCrate -----------------------------------------------------------------
+// --- FX -------------------------------------------------------------------------
+/** muzzle flash — plus-shaped pop at the gun tip, ~60 ms */
+export class MuzzleFlash {
+  g = new Graphics();
+  t = 0;
+  readonly dur = 0.06;
+
+  constructor(pos: Vec, angle: number, big = false) {
+    const len = big ? 13 : 9;
+    this.g.rotation = angle;
+    this.g.x = pos.x;
+    this.g.y = pos.y;
+    this.g.rect(0, -1.5, len, 3).fill(PAL.muzzle)
+      .rect(1, -3, 4, 6).fill(PAL.muzzle)
+      .rect(len - 3, -2, 3, 4).fill({ color: PAL.warn, alpha: 0.8 });
+  }
+
+  tick(dt: number): boolean {
+    this.t += dt;
+    this.g.alpha = 1 - this.t / this.dur;
+    return this.t < this.dur;
+  }
+
+  destroy(): void {
+    this.g.destroy();
+  }
+}
+
+/** persistent blood decal — stays on the floor for the whole run (capped) */
+export class BloodDecal {
+  readonly g = new Graphics();
+
+  constructor(pos: Vec) {
+    const n = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const ox = (Math.random() - 0.5) * 16;
+      const oy = (Math.random() - 0.5) * 16;
+      const s = 2 + Math.random() * 3;
+      this.g.rect(pos.x + ox, pos.y + oy, s, s)
+        .fill(Math.random() < 0.6 ? PAL.blood : PAL.bloodDark);
+    }
+  }
+}
+
+// --- Props ----------------------------------------------------------------------
 export class AmmoCrate {
   g = new Graphics();
   taken = false;
 
   constructor(public pos: Vec) {
-    // readable pickup: yellow box with dark band
-    this.g.rect(-7, -5, 14, 10).fill(0xf5c542).stroke(OUTLINE)
-      .rect(-7, -1.5, 14, 3).fill(0x8a6d1a)
-      .rect(-2, -4, 4, 8).fill(0xfff1a1)
-      .rect(-9, 6, 18, 2).fill({color:0xf5c542,alpha:0.35});
+    this.g.rect(-7, -5, 14, 10).fill(PAL.crate).stroke(OUTLINE)
+      .rect(-7, -2, 14, 3).fill(PAL.crateBand)
+      .rect(-1, -5, 2, 10).fill(PAL.crateBand)
+      .rect(-3, -3.5, 6, 2).fill(PAL.crateMark);
     this.g.x = pos.x;
     this.g.y = pos.y;
   }
@@ -210,18 +313,16 @@ export class AmmoCrate {
   }
 }
 
-// --- Barrel --------------------------------------------------------------------
 export class Barrel {
   g = new Graphics();
   exploded = false;
   fuse = -1; // chain-lighting delay
 
   constructor(public pos: Vec) {
-    this.g.rect(-6, -8, 12, 16).fill(0xb03030).stroke(OUTLINE)
-      .rect(-6, -5, 12, 2).fill(0x503f38)
-      .rect(-6, 4, 12, 2).fill(0x503f38)
-      .poly([-3,2,0,-3,3,2]).fill(0xffd35d)
-      .rect(-4, -7, 3, 1).fill(0xf6755d);
+    this.g.rect(-6, -8, 12, 16).fill(PAL.barrel).stroke(OUTLINE)
+      .rect(-6, -4, 12, 3).fill(PAL.barrelBand)
+      .rect(-6, 3, 12, 3).fill(PAL.barrelBand)
+      .rect(-2, -10, 4, 3).fill(PAL.warn);
     this.g.x = pos.x;
     this.g.y = pos.y;
   }
@@ -238,7 +339,7 @@ export class BlastRing {
   t = 0;
   readonly dur = 0.35;
 
-  constructor(pos: Vec, readonly radius: number, readonly color = 0xf5c542) {
+  constructor(pos: Vec, readonly radius: number) {
     this.g.x = pos.x;
     this.g.y = pos.y;
   }
@@ -246,7 +347,10 @@ export class BlastRing {
   tick(dt: number): boolean {
     this.t += dt;
     const k = this.t / this.dur;
-    this.g.clear().circle(0, 0, Math.max(1, this.radius * k)).stroke({ width: 3, color: this.color, alpha: 1 - k });
+    this.g.clear().circle(0, 0, Math.max(1, this.radius * k))
+      .stroke({ width: 3, color: PAL.amber, alpha: 1 - k })
+      .circle(0, 0, Math.max(1, this.radius * k * 0.55))
+      .fill({ color: PAL.muzzle, alpha: Math.max(0, 0.5 - k) });
     return k < 1;
   }
 

@@ -3,28 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Boxhead — MAGA native replica</title>
+<title>BLOCKHEAD: ARENA NIGHTS</title>
 <style>
-  html, body { margin:0; background:#131a1c; height:100%; overflow:hidden; color:#e7f0ec; }
-  canvas { position:fixed; left:0; top:0; touch-action:none; image-rendering:pixelated; outline:none; }
-  .badge { position:fixed; top:0; left:0; right:0; height:48px; box-sizing:border-box; z-index:10;
-    display:flex; align-items:center; gap:20px; padding:0 190px 0 18px;
-    border-bottom:1px solid #ffffff19; background:#131a1c; color:#c4f04d; font:12px/1.3 ui-monospace,monospace; letter-spacing:.08em; }
-  .badge a { color:#a4b7b5; text-decoration:none; font-size:10px; letter-spacing:0; white-space:nowrap; }
-  .badge strong { white-space:nowrap; }
-  .edition { color:#8eaaa4; font-size:10px; white-space:nowrap; }
-  .mute { position:fixed; top:8px; right:8px; z-index:11; min-height:32px; padding:5px 10px;
-    background:#ffffff08; color:#c4f04d; border:1px solid #ffffff28; font:10px/1 ui-monospace,monospace; cursor:pointer; }
-  .pause { right:98px; }
-  .mute:hover { background:#ffffff14; }
-  .mute:focus-visible,.badge a:focus-visible { outline:2px solid #c4f04d; outline-offset:3px; }
-  @media(max-width:700px) { .edition { display:none; } .badge { gap:10px; padding-left:10px; font-size:10px; letter-spacing:0; } .badge a { font-size:0; } .badge a::before { content:'←'; font-size:16px; } }
+  html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
+  canvas { position: fixed; left: 0; top: 0; touch-action: none; image-rendering: pixelated; }
+  .badge {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    background: repeating-linear-gradient(45deg, #3a1414, #3a1414 12px, #2a0f0f 12px, #2a0f0f 24px);
+    color: #ffb3b3; font: 11px/1.4 monospace; text-align: center; padding: 4px;
+    border-bottom: 1px solid #e33e3e; letter-spacing: 0.06em;
+  }
+  .audio {
+    position: fixed; top: 26px; right: 8px; z-index: 10;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .mute {
+    background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
+    font: 11px/1 monospace; padding: 4px 8px; cursor: pointer;
+  }
+  #vol { width: 86px; accent-color: #f5c542; height: 18px; margin: 0; }
 </style>
 </head>
 <body>
-<div class="badge"><a href="../" aria-label="Back to arcade">← ARCADE</a><strong>BOXHEAD</strong><span class="edition">2PLAY ROOMS</span></div>
-<button id="pause" class="mute pause" type="button" aria-label="Pause or resume game">PAUSE</button>
-<button id="mute" class="mute" type="button">SOUND ON</button>
+<div class="badge">INTERNAL-NO-PUBLIC — idea 001 native replica · no ship until written clearance (Cooper / Crazy Monkey / Fire Source)</div>
+<div class="audio" id="audio">
+  <input id="vol" type="range" min="0" max="100" value="70" aria-label="Volume">
+  <button id="mute" class="mute" type="button">SOUND ON</button>
+</div>
 <script type="importmap">
   { "imports": { "pixi.js": "./vendor/pixi.min.mjs" } }
 </script>
