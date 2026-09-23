@@ -91,6 +91,16 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
     if (e.code === 'KeyQ' && (sim.mode === 'gameover' || sim.mode === 'win' || (sim.mode === 'play' && sim.paused))) {
       sim.quitToTitle();
     }
+    // settings: [ ] volume, M mute — persisted per game (spec: settings persist)
+    if (e.code === 'BracketLeft' || e.code === 'BracketRight') {
+      sfx.volume = Math.max(0, Math.min(1, sfx.volume + (e.code === 'BracketRight' ? 0.1 : -0.1)));
+      save(game, 'volume', sfx.volume);
+    }
+    if (e.code === 'KeyM') {
+      sfx.setMuted(!sfx.muted);
+      save(game, 'muted', sfx.muted);
+      paintMute();
+    }
   });
 
   // PROOF/debug hook: open with ?debug to expose state for automated acceptance

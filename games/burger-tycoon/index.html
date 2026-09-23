@@ -39,7 +39,7 @@
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // ../../packages/arcade-core/src/input.ts
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/input.ts
   var KEYMAP_P1_VERSUS = {
     KeyW: "up",
     KeyS: "down",
@@ -235,7 +235,7 @@
     }
   };
 
-  // ../../packages/arcade-core/src/scale.ts
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/scale.ts
   function fitIntegerScale(stageW, stageH, vp, maxFactor = 4) {
     const fit = Math.min(vp.width / stageW, vp.height / stageH);
     if (fit < 1) return fit;
@@ -251,7 +251,7 @@
     return { width: window.innerWidth, height: window.innerHeight };
   }
 
-  // ../../packages/arcade-core/src/storage.ts
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/storage.ts
   var PREFIX = "maga:";
   function save(game, key, value) {
     try {
@@ -268,7 +268,7 @@
     }
   }
 
-  // ../../packages/arcade-core/src/sfx.ts
+  // MAGA-everything/02-code/armor-games/packages/arcade-core/src/sfx.ts
   function stepsFromBpm(bpmValue) {
     return 6e4 / bpmValue / 4;
   }
@@ -553,7 +553,7 @@
   __publicField(_Sfx, "customPresets", {});
   var Sfx = _Sfx;
 
-  // src/sim.ts
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/sim.ts
   var PANES = [
     { key: "farm", title: "FARMLAND" },
     { key: "feed", title: "FEEDLOT" },
@@ -1404,7 +1404,7 @@
     }
   };
 
-  // src/icons.ts
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/icons.ts
   function buildSprite(size, pixels) {
     const c = document.createElement("canvas");
     c.width = size;
@@ -1615,7 +1615,7 @@
     g.restore();
   }
 
-  // src/main.ts
+  // MAGA-everything/02-code/armor-games/apps/burger-tycoon/src/main.ts
   var W = 960;
   var H = 420;
   var QUARTER_SECONDS = 90;

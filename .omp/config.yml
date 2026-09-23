@@ -1,19 +1,22 @@
 # Project-level OMP settings — fleet maga.
-# L0 directive 2026-09-22: all L2 task dispatches route to m_kcode
-# (kimi-for-coding) at thinking=low. The m_kcode alias in the global
-# config resolves to :high, so the literal selector is pinned here.
+# Routing directive 2026-09-23 (operator): subagents must run on this
+# session's own model family — zai/glm-5.3 (or glm-5.3-flash). The generic
+# `task` type is pinned here because its spawn-policy default resolves to
+# devin/swe-2, which is off-limits for this run. The L0 kimi pins below are
+# superseded for this run: named specialist types also route to glm-5.3.
 task:
   agentModelOverrides:
-    planner: "kimi-code/kimi-for-coding:low"
-    scout: "kimi-code/kimi-for-coding:low"
-    reviewer: "kimi-code/kimi-for-coding:low"
-    critic: "kimi-code/kimi-for-coding:low"
-    connector: "kimi-code/kimi-for-coding:low"
-    sentinel: "kimi-code/kimi-for-coding:low"
-    executor: "kimi-code/kimi-for-coding:low"
-    mutation-tester: "kimi-code/kimi-for-coding:low"
-    revenger: "kimi-code/kimi-for-coding:low"
-    simplifier: "kimi-code/kimi-for-coding:low"
-    scribe: "kimi-code/kimi-for-coding:low"
-    distiller: "kimi-code/kimi-for-coding:low"
-    labrat: "kimi-code/kimi-for-coding:low"
+    task: "zai/glm-5.3"
+    planner: "zai/glm-5.3"
+    scout: "zai/glm-5.3-flash"
+    reviewer: "zai/glm-5.3"
+    critic: "zai/glm-5.3"
+    connector: "zai/glm-5.3"
+    sentinel: "zai/glm-5.3"
+    executor: "zai/glm-5.3"
+    mutation-tester: "zai/glm-5.3"
+    revenger: "zai/glm-5.3"
+    simplifier: "zai/glm-5.3"
+    scribe: "zai/glm-5.3"
+    distiller: "zai/glm-5.3"
+    labrat: "zai/glm-5.3-flash"

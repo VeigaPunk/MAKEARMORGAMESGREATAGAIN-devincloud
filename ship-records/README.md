@@ -44,10 +44,26 @@ node tools/ship-build.mjs                       # only after editing TS sources;
 # Evidence artifacts: verification/evidence/<run>-*
 ```
 
+## Final fleet verification (2026-09-23, end of run)
+
+| Check | Result |
+|-------|--------|
+| `node tools/ship-build.mjs` (all 7) | boxhead 1985KB · impossible 69KB · burger 81KB · chicken 1935KB · cluck 1938KB · sas 135KB · hardest copied |
+| `node hardest/validate.mjs` | **114/114 levels pass, exit 0** |
+| Portal + 7 games from file:// | **zero console errors** on every page; live pixels on every canvas |
+| Impossible solver | ALL 5 LEVELS PASS + 30/30 checkpoints |
+| Burger economy sim | clean Q11 FIRED · dirty SUSTAINED+3 scandals · mixed SUSTAINED |
+| S&S economy sim | 83% completion · final ~33% first-try |
+| Boxhead stress | 60.3 fps @ 100 movers |
+| Touch (device emulation) | shmup drag pad moves ship; mouse gated from touch zones |
+| Real-input drives | per record — kills/medals/DM-5-0/wave-2/XSS-regression/deforest/checkpoint-respawn all live |
+
 ## Run identity
 
-- Run date: 2026-09-22
-- Model: `zai/glm-5.3`
+- Run dates: 2026-09-22 → 2026-09-23 (single run)
+- Model: `zai/glm-5.3` (session); subagent lanes also glm-5.3 (routing
+  corrected mid-run per operator directive — initial devin-routed batch
+  cancelled before any edits landed)
 - Substrate: Oh My Pi (`omp`) CLI on local Arch Linux; node v24.19.0,
   npm 11.17.0, esbuild 0.25.12, /usr/bin/chromium for browser verification.
 - Git identity (repo-local): `maga-ship <ship@local.invalid>`
