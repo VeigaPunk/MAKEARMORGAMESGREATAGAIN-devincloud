@@ -1,154 +1,250 @@
-/* Clashbound browser client. All actions resolve through the same engine as the simulation. */
+/* Clashbound — DOM UI. Human = P1, AI = P2.
+   Flow: deck select → newGame → human mulligan (click cards to toss, confirm) →
+   turns. Clash flow: engine calls CB.hooks.clashWindow; for the human defender we
+   stash the decision and return PENDING — the engine keeps st.pendingAttack and
+   the AI loop exits. resolveClash() applies the choice, resolves, resumes AI. */
 (function () {
   const CB = window.CB, E = CB.engine;
-  const $ = id => document.getElementById(id);
-  const heroes = { bruiser: 'vex', bulwark: 'thorn', trickster: 'odds' };
-  let st, attacking = null, targeting = null, pendingClash = null, mullSel = new Set();
-  let deckA = 'bruiser', deckB = 'bulwark', aiBusy = false, gameSeq = 0, logLen = 0;
-  let muted = false, audio;
-  function sound(freq = 390) {
-    if (muted) return;
-    try { audio ||= new AudioContext(); void audio.resume(); const o = audio.createOscillator(), g = audio.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(freq, audio.currentTime); o.frequency.exponentialRampToValueAtTime(freq * .7, audio.currentTime + .12); g.gain.setValueAtTime(.09, audio.currentTime); g.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .15); o.connect(g).connect(audio.destination); o.start(); o.stop(audio.currentTime + .16); } catch (_) { /* Audio is optional. */ }
-  }
-  const text = (tag, str, cls = '') => { const el = document.createElement(tag); el.textContent = str; el.className = cls; return el; };
-  const contestAtk = p => p.board.reduce((sum, m) => sum + (E.GUARD_NO_CONTEST && m.card.keywords.includes('Guard') ? 0 : m.atk), 0);
-  function cardArt(c) { const image = document.createElement('img'); image.src = `art/${c.id}.svg`; image.alt = ''; image.className = 'card-art'; return image; }
-  function canTarget(m) { return targeting && (targeting.side === 'any' || (targeting.side === 'self') === (m.owner === 0)); }
-  function commitTarget(target) {
-    if (!targeting || aiBusy) return;
-    const t = targeting; targeting = null;
-    if (t.power) E.heroPower(st, 0, target); else E.playCard(st, 0, t.index, target === 'hero' ? null : target);
-    sound(); render();
-  }
+  let st, attacking = null, logLen = 0, aiBusy = false;
+  let pendingClash = null; // {attacker, defender, cards:[{handIdx, card}]}
+  let mullSel = new Set(); // hand indices marked for redraw
+  let deckA = "bruiser", deckB = "bulwark";
+
+  const DECK_HERO = { bruiser: "vex", bulwark: "thorn", trickster: "odds" };
+  const $ = (id) => document.getElementById(id);
+
   CB.hooks.humanSeat = 0;
   CB.hooks.humanClash = function (game, defPi, attacker, defender) {
-    const p = game.players[defPi], cards = [];
-    p.hand.forEach((c, i) => { if (c.clashOnly && E.totalMana(p) >= c.cost && (c.id !== 'cage-door' || defender !== 'hero')) cards.push({ handIdx: i, card: c }); });
+    const p = game.players[defPi];
+    const cards = [];
+    p.hand.forEach((c, i) => { if (c.clashOnly && E.totalMana(p) >= c.cost) cards.push({ handIdx: i, card: c }); });
     if (!cards.length) return null;
-    pendingClash = { attacker, defender, cards }; render(); return CB.hooks.PENDING;
+    pendingClash = { attacker, defender, cards };
+    render();
+    return CB.hooks.PENDING;
   };
-  function finishAI() {
-    if (st.winner === null) CB.ai.takeTurn(st, 1);
-    if (st.pendingAttack) { render(); return; }
-    if (st.winner === null) { E.endTurn(st); E.startTurn(st); }
-    aiBusy = false; render();
-  }
+
   function resolveClash(handIdx) {
     if (!pendingClash) return;
-    const p = st.players[0]; let ctx = null;
+    const p = st.players[0];
+    let ctx = null;
     if (handIdx !== null) {
       const c = p.hand[handIdx];
       if (c && c.clashOnly && E.totalMana(p) >= c.cost) {
-        p.hand.splice(handIdx, 1); E.pay(p, c.cost);
+        p.hand.splice(handIdx, 1);
+        E.pay(p, c.cost);
         ctx = { attacker: pendingClash.attacker, defender: pendingClash.defender, negate: false };
-        E.say(st, `CLASH: P1 plays ${c.name}`, 0); c.effect(st, 0, ctx); p.discard.push(c); sound(590);
+        E.say(st, `CLASH: P1 plays ${c.name}`, 0);
+        c.effect(st, 0, ctx);
+        p.discard.push(c);
       }
     }
-    pendingClash = null; E.resolveAttack(st, ctx); finishAI();
+    pendingClash = null;
+    E.resolveAttack(st, ctx);
+    resumeAI();
   }
+
+  function resumeAI() {
+    // continue the AI turn that paused on our clash decision
+    if (st.winner !== null) { aiBusy = false; render(); return; }
+    CB.ai.takeTurn(st, 1);
+    if (st.pendingAttack) { render(); return; } // paused again on another clash
+    E.endTurn(st);
+    aiBusy = false;
+    if (st.winner === null) E.startTurn(st);
+    render();
+  }
+
   function showDeckSelect() {
-    gameSeq++; aiBusy = false; pendingClash = null; attacking = null; targeting = null;
-    $('deckselect').hidden = false; $('app').hidden = true;
+    $("deckselect").style.display = "flex";
+    $("app").style.display = "none";
   }
+
   function newGame() {
-    const others = Object.keys(CB.cards.DECKS).filter(d => d !== deckA);
-    deckB = others[Math.random() * others.length | 0];
-    st = E.newGame(CB.cards.DECKS[deckA], CB.cards.DECKS[deckB], CB.heroes.byId[heroes[deckA]], CB.heroes.byId[heroes[deckB]], Math.random() * 1e9 | 0);
-    attacking = null; targeting = null; pendingClash = null; logLen = 0; aiBusy = false; gameSeq++; mullSel = new Set();
-    $('log').replaceChildren(); $('deckselect').hidden = true; $('app').hidden = false;
-    CB.ai.mulligan(st, 1); sound(520); render();
+    const others = Object.keys(CB.cards.DECKS).filter((d) => d !== deckA);
+    deckB = others[(Math.random() * others.length) | 0];
+    st = E.newGame(CB.cards.DECKS[deckA], CB.cards.DECKS[deckB],
+      CB.heroes.byId[DECK_HERO[deckA]], CB.heroes.byId[DECK_HERO[deckB]],
+      (Math.random() * 1e9) | 0);
+    attacking = null; logLen = 0; aiBusy = false; pendingClash = null; gameSeq++;
+    mullSel = new Set();
+    $("log").innerHTML = "";
+    $("deckselect").style.display = "none";
+    $("app").style.display = "block";
+    CB.ai.mulligan(st, 1); // AI resolves its mulligan immediately; human chooses
+    render();
   }
+
+  function confirmMulligan() {
+    if (st.phase !== "mulligan") return;
+    E.mulligan(st, 0, Array.from(mullSel));
+    mullSel = new Set();
+    E.startTurn(st);
+    render();
+  }
+
+  function kw(m) {
+    const k = m.card.keywords.join(" ");
+    return k + (m.sick ? " · zzz" : "") + (m.card.keywords.includes("Ward") ? (m.wardUsed ? " ·ward×" : " ·ward") : "");
+  }
+
   function minionEl(m, mine) {
-    const el = document.createElement('button'); el.type = 'button';
-    el.className = 'minion' + (m.card.keywords.includes('Guard') ? ' guard' : '') + (m.sick ? ' sick' : '') + (m.attacked ? ' exhausted' : '');
-    el.dataset.uid = m.uid; el.append(cardArt(m.card), text('span', m.card.name, 'name'), text('span', m.card.keywords.join(' · ') || (m.sick ? 'Summoning' : m.attacked ? 'Exhausted' : 'Ready'), 'kw'), text('span', `${m.atk} / ${m.hp}`, 'stats'));
-    el.title = `${m.card.name} · ${m.atk} attack / ${m.hp} health. ${m.card.text || ''}`;
-    if (m.card.keywords.includes('Ward') && !m.wardUsed) el.classList.add('ward');
-    let enabled = false;
-    if (targeting && canTarget(m)) { enabled = true; el.classList.add('targetable'); el.onclick = () => commitTarget(m); }
-    else if (!targeting && mine && !m.sick && !m.attacked && st.winner === null && !aiBusy && !pendingClash && st.phase === 'main') {
-      enabled = true; el.classList.add('canatk'); el.onclick = () => { attacking = attacking === m ? null : m; sound(320); render(); };
-    } else if (attacking && !mine && E.legalTargets(st, 0, attacking).includes(m)) {
-      enabled = true; el.classList.add('targetable'); el.onclick = () => { E.attack(st, 0, attacking.uid, m); attacking = null; sound(180); render(); };
+    const el = document.createElement("div");
+    el.className = "minion" +
+      (m.card.keywords.includes("Guard") ? " guard" : "") +
+      (m.sick ? " sick" : "");
+    el.innerHTML = `<div class="name">${m.card.name}</div><div class="kw">${kw(m)}</div><div class="stats">${m.atk}/${m.hp}</div>`;
+    if (mine && !m.sick && !m.attacked && st.winner === null && !aiBusy && !pendingClash && st.phase === "main") {
+      el.classList.add("canatk");
+      el.onclick = () => { attacking = attacking === m ? null : m; render(); };
     }
-    el.disabled = !enabled; if (attacking === m) el.classList.add('selected'); return el;
+    if (attacking && !mine) {
+      const legal = E.legalTargets(st, 0, attacking);
+      if (legal.includes(m)) { el.classList.add("targetable"); el.onclick = () => { E.attack(st, 0, attacking.uid, m); attacking = null; render(); }; }
+    }
+    if (attacking === m) el.classList.add("selected");
+    return el;
   }
-  function heroBar(el, p, mine, deck) {
-    el.replaceChildren();
-    const img = document.createElement('img'); img.src = `art/hero-${p.hero.id}.svg`; img.alt = ''; img.className = 'heroart'; el.append(img);
-    const info = document.createElement('div'); info.className = 'hero-info'; info.append(text('strong', p.hero.name), text('span', `${mine ? 'YOU' : 'RIVAL'} · ${deck.toUpperCase()} · ${p.deck.length} cards left`, 'hero-meta')); el.append(info);
-    const health = text('span', `♥ ${Math.max(0, p.hp)}`, 'hp'); health.setAttribute('aria-label', `${p.hp} health`); el.append(health);
-    if (mine) el.append(text('span', `◈ ${E.totalMana(p)} mana${p.tempMana ? ' + surge' : ''}`, 'mana')); else el.append(text('span', `${p.hand.length} in hand`, 'hero-meta'));
-    el.append(text('span', `${contestAtk(p)} contest ATK`, 'contest-atk'));
+
+  function pips(cp, mine) {
+    let s = "";
+    for (let i = 0; i < E.CONTEST_TARGET; i++) s += `<span class="pip${i < cp ? " on" : ""}${mine ? " mine" : ""}"></span>`;
+    return s;
   }
+
   function render() {
-    const me = st.players[0], opp = st.players[1], mull = st.phase === 'mulligan', over = st.winner !== null;
-    if (over) { attacking = null; targeting = null; }
-    heroBar($('oppbar'), opp, false, deckB); heroBar($('mybar'), me, true, deckA);
-    $('cp').replaceChildren(text('span', 'YOU', 'cplabel'), text('b', `${me.cp}`, 'my-cp'), text('span', '/ 8', 'cpgoal'), text('span', '—', 'cpgoal'), text('b', `${opp.cp}`), text('span', '/ 8', 'cpgoal'), text('span', 'RIVAL', 'cplabel'));
-    $('turn').textContent = over ? st.winner === 0 ? 'VICTORY' : 'DEFEAT' : mull ? 'OPENING HAND' : pendingClash ? 'CLASH WINDOW' : aiBusy ? 'RIVAL’S TURN' : `YOUR TURN ${st.turn}`;
-    const instruction = over ? `${st.winner === 0 ? 'You claimed' : 'Your rival claimed'} the arena by ${st.winReason}. Choose New game to play again.` : targeting ? `Choose ${targeting.side === 'self' ? 'a friendly' : targeting.side === 'any' ? 'a' : 'an enemy'} minion${targeting.hero ? ' or the rival hero' : ''} for ${targeting.name}.` : attacking ? `Choose a highlighted target for ${attacking.card.name}.` : mull ? 'Select cards to redraw, then confirm your opening hand.' : pendingClash ? 'Spend your remaining mana to defend, or decline.' : aiBusy ? 'Your rival is planning their move…' : 'Play a card, attack with a ready minion, or use your hero power. The stronger board scores at each turn end.';
-    $('instruction').textContent = instruction; $('cancel').hidden = !targeting && !attacking;
-    for (const [id, p, mine] of [['oppboard', opp, false], ['myboard', me, true]]) {
-      const board = $(id); board.replaceChildren();
-      for (let i = 0; i < E.BOARD_CAP; i++) { const slot = document.createElement('div'); slot.className = 'slot'; if (p.board[i]) slot.append(minionEl(p.board[i], mine)); else slot.append(text('span', '◇', 'empty-slot')); board.append(slot); }
+    const me = st.players[0], opp = st.players[1];
+    const myAtk = me.board.reduce((s, m) => s + m.atk, 0);
+    const opAtk = opp.board.reduce((s, m) => s + m.atk, 0);
+    const inMulligan = st.phase === "mulligan";
+    const heroArt = { vex: "art/hero-vex.svg", thorn: "art/hero-thorn.svg", odds: "art/hero-odds.svg" };
+    $("oppbar").innerHTML = `<img class="heroart" src="${heroArt[opp.hero.id] || ""}" alt=""> <b>${opp.hero.name}</b> <span class="decktag">${deckB}</span> HP ${opp.hp} · hand ${opp.hand.length} · deck ${opp.deck.length} · board ATK ${opAtk}`;
+    $("mybar").innerHTML = `<img class="heroart" src="${heroArt[me.hero.id] || ""}" alt=""> <b>${me.hero.name}</b> <span class="decktag">${deckA}</span> HP ${me.hp} · deck ${me.deck.length} · mana <b>${me.mana + me.tempMana}</b>${me.tempMana ? " (+" + me.tempMana + " surge)" : ""} · board ATK ${myAtk}`;
+    $("cp").innerHTML = `<span class="cplabel">YOU</span> ${pips(me.cp, true)} <b>${me.cp}</b> — <b>${opp.cp}</b> ${pips(opp.cp, false)} <span class="cplabel">AI</span>`;
+    $("turn").textContent = st.winner !== null
+      ? `GAME OVER — ${st.winner === 0 ? "YOU WIN" : "AI WINS"} (${st.winReason})`
+      : inMulligan ? "MULLIGAN — click cards to redraw"
+      : pendingClash ? "CLASH — defend!" : aiBusy ? "AI thinking…" : `YOUR TURN ${st.turn}`;
+
+    const ob = $("oppboard"); ob.innerHTML = "";
+    for (let i = 0; i < E.BOARD_CAP; i++) {
+      const s = document.createElement("div"); s.className = "slot";
+      if (opp.board[i]) s.appendChild(minionEl(opp.board[i], false));
+      ob.appendChild(s);
     }
-    const heroTarget = (attacking && E.legalTargets(st, 0, attacking).includes('hero')) || targeting?.hero;
-    $('oppbar').classList.toggle('targetable', !!heroTarget); $('oppbar').tabIndex = heroTarget ? 0 : -1;
-    $('oppbar').setAttribute('role', heroTarget ? 'button' : 'group');
-    $('oppbar').onclick = heroTarget ? () => { if (targeting) commitTarget('hero'); else { E.attack(st, 0, attacking.uid, 'hero'); attacking = null; sound(180); render(); } } : null;
-    $('oppbar').onkeydown = e => { if (heroTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); $('oppbar').click(); } };
-    const hand = $('hand'); hand.replaceChildren();
+    if (attacking && E.legalTargets(st, 0, attacking).includes("hero")) {
+      $("oppbar").style.outline = "3px solid #d9534f";
+      $("oppbar").onclick = () => { E.attack(st, 0, attacking.uid, "hero"); attacking = null; render(); };
+    } else { $("oppbar").style.outline = ""; $("oppbar").onclick = null; }
+
+    const mb = $("myboard"); mb.innerHTML = "";
+    for (let i = 0; i < E.BOARD_CAP; i++) {
+      const s = document.createElement("div"); s.className = "slot";
+      if (me.board[i]) s.appendChild(minionEl(me.board[i], true));
+      mb.appendChild(s);
+    }
+
+    const h = $("hand"); h.innerHTML = "";
     me.hand.forEach((c, i) => {
-      const el = document.createElement('button'); el.type = 'button'; el.dataset.index = i;
-      const affordable = E.canPlay(st, 0, c), enabled = mull || (affordable && !aiBusy && !pendingClash && !over);
-      el.className = 'card' + (enabled ? '' : ' unaffordable') + (mull && mullSel.has(i) ? ' mullsel' : '') + (targeting?.index === i ? ' selected' : ''); el.disabled = !enabled;
-      el.append(cardArt(c), text('span', c.cost, 'cost'), text('span', c.name, 'name'), text('span', c.type === 'minion' ? `${c.atk} ATK · ${c.hp} HP` : c.clashOnly ? 'CLASH · DEFENSE ONLY' : 'SPELL', 'card-type'), text('span', c.text || 'An arena fighter. Ready to attack next turn.', 'txt'));
-      if (mull) { el.setAttribute('aria-pressed', String(mullSel.has(i))); el.onclick = () => { if (mullSel.has(i)) mullSel.delete(i); else mullSel.add(i); render(); }; }
-      else if (enabled) el.onclick = () => {
-        attacking = null;
-        if (c.needsTarget || ['sucker-punch', 'ring-out'].includes(c.id)) { targeting = { index: i, name: c.name, side: c.targetSide === 'self' ? 'self' : 'enemy', hero: !c.needsTarget }; render(); }
-        else { targeting = null; E.playCard(st, 0, i, null); sound(); render(); }
-      };
-      hand.append(el);
+      const el = document.createElement("div");
+      const afford = E.canPlay(st, 0, c) && !c.clashOnly;
+      el.className = "card" + (afford ? "" : " unaffordable") + (inMulligan && mullSel.has(i) ? " mullsel" : "");
+      const stat = c.type === "minion" ? ` ${c.atk}/${c.hp}` : "";
+      const kws = (c.keywords || []).join(" ") + (c.clashOnly ? " Clash" : "");
+      el.innerHTML = `<span class="cost">${c.cost}</span><span class="name">${c.name}</span><div class="txt">${kws}${stat}</div><div class="txt">${c.text || ""}</div>`;
+      if (inMulligan) {
+        el.classList.add("mullpick");
+        el.onclick = () => { if (mullSel.has(i)) mullSel.delete(i); else mullSel.add(i); render(); };
+      } else if (afford && st.winner === null && !aiBusy && !pendingClash && st.phase === "main") {
+        el.onclick = () => {
+          const target = c.needsTarget ? pickSpellTarget(c) : null;
+          E.playCard(st, 0, i, target); render();
+        };
+      }
+      h.appendChild(el);
     });
-    $('mulliganbar').hidden = !mull;
-    $('mullinfo').textContent = `${mullSel.size} card${mullSel.size === 1 ? '' : 's'} selected for redraw`;
-    $('mullconfirm').textContent = mullSel.size ? `Redraw ${mullSel.size}` : 'Keep hand';
-    $('clashprompt').hidden = !pendingClash;
-    if (pendingClash) {
-      const { attacker, defender, cards } = pendingClash;
-      $('clashinfo').textContent = `${attacker.card.name} (${attacker.atk} ATK) attacks ${defender === 'hero' ? 'your hero' : defender.card.name}.`;
-      $('clashcards').replaceChildren();
-      for (const { handIdx, card } of cards) { const b = document.createElement('button'); b.append(text('strong', `${card.name} · ${card.cost} mana`), text('small', card.text)); b.onclick = () => resolveClash(handIdx); $('clashcards').append(b); }
-    }
-    const hasPowerTarget = me.hero.id === 'thorn' ? me.board.length : opp.board.length;
-    $('power').disabled = me.powerUsed || E.totalMana(me) < 2 || over || aiBusy || !!pendingClash || mull || !hasPowerTarget;
-    $('power').textContent = `${me.hero.powerName.split('(')[0].trim()} · 2`; $('power').title = me.hero.powerName;
-    $('endturn').disabled = over || aiBusy || !!pendingClash || mull;
-    $('result').hidden = !over; $('result').textContent = over ? `${st.winner === 0 ? 'The arena is yours.' : 'A worthy rival. A new chance awaits.'} ${st.winReason === 'contest' ? 'Eight contest points claimed.' : st.winReason === 'lethal' ? 'A hero has fallen.' : 'The final card has been drawn.'}` : '';
-    const fresh = st.log.slice(logLen); for (const line of fresh) $('log').append(text('div', line));
-    if (fresh.length) { logLen = st.log.length; $('log').scrollTop = $('log').scrollHeight; }
+
+  // needsTarget spells: friendly spells target your board, hostile spells the enemy's.
+  function pickSpellTarget(c) {
+    const friendly = c.targetSide === "self";
+    const board = friendly ? st.players[0].board : st.players[1].board;
+    if (!board.length) return null;
+    return board.reduce((a, b) => (b.atk > a.atk ? b : a));
   }
-  $('endturn').onclick = () => {
-    if (aiBusy || pendingClash || st.phase !== 'main' || st.winner !== null) return;
-    attacking = null; targeting = null; E.endTurn(st); sound(260);
+
+    // mulligan bar
+    const mb2 = $("mulliganbar");
+    if (inMulligan) {
+      mb2.style.display = "flex";
+      $("mullinfo").textContent = mullSel.size
+        ? `${mullSel.size} card${mullSel.size === 1 ? "" : "s"} marked — confirm to redraw`
+        : "Click cards to mark them for redraw, or keep your hand.";
+      $("mullconfirm").textContent = mullSel.size ? `Redraw ${mullSel.size}` : "Keep hand";
+    } else mb2.style.display = "none";
+
+    // clash prompt
+    const cp = $("clashprompt");
+    if (pendingClash) {
+      cp.style.display = "flex";
+      const at = pendingClash.attacker;
+      const df = pendingClash.defender;
+      $("clashinfo").textContent = `${at.card.name} (${at.atk}/${at.hp}) attacks ${df === "hero" ? "YOUR HERO" : df.card.name} — play a Clash spell?`;
+      const btns = $("clashcards"); btns.innerHTML = "";
+      for (const { handIdx, card } of pendingClash.cards) {
+        const b = document.createElement("button");
+        b.textContent = `${card.name} (${card.cost})`;
+        b.title = card.text || "";
+        b.onclick = () => resolveClash(handIdx);
+        btns.appendChild(b);
+      }
+    } else cp.style.display = "none";
+
+    $("power").disabled = me.powerUsed || E.totalMana(me) < 2 || st.winner !== null || aiBusy || !!pendingClash || inMulligan;
+    $("power").textContent = `${me.hero.powerName.split("(")[0].trim()} (2)`;
+    $("endturn").disabled = st.winner !== null || aiBusy || !!pendingClash || inMulligan;
+
+    const lg = $("log");
+    const fresh = st.log.slice(logLen);
+    if (fresh.length) {
+      lg.innerHTML += fresh.map((l) => `<div class="new">${l}</div>`).join("");
+      logLen = st.log.length;
+      lg.scrollTop = lg.scrollHeight;
+    }
+  }
+
+  let gameSeq = 0; // invalidates stale AI timers when a new game starts
+
+  $("endturn").onclick = () => {
+    if (aiBusy || pendingClash || st.phase !== "main") return;
+    attacking = null;
+    E.endTurn(st);
     if (st.winner !== null) { render(); return; }
-    aiBusy = true; render(); const seq = gameSeq;
-    setTimeout(() => { if (seq !== gameSeq) return; E.startTurn(st); finishAI(); }, 400);
+    aiBusy = true;
+    render();
+    const seq = gameSeq;
+    setTimeout(() => {
+      if (seq !== gameSeq) return; // a newer game superseded this timer
+      E.startTurn(st);
+      CB.ai.takeTurn(st, 1);
+      if (st.pendingAttack) { render(); return; } // clash prompt — resolveClash resumes
+      E.endTurn(st);
+      aiBusy = false;
+      if (st.winner === null) E.startTurn(st);
+      render();
+    }, 350);
   };
-  $('power').onclick = () => {
-    const p = st.players[0]; attacking = null;
-    if (p.hero.id === 'odds') { E.heroPower(st, 0); sound(560); render(); }
-    else { targeting = { power: true, name: p.hero.powerName.split('(')[0].trim(), side: p.hero.id === 'thorn' ? 'self' : 'any', hero: false }; render(); }
+  $("power").onclick = () => {
+    const me = st.players[0];
+    const targetless = me.hero.id === "odds";
+    const t = me.hero.id === "thorn" ? me.board[0] : st.players[1].board[0];
+    if (targetless || t) { E.heroPower(st, 0, targetless ? undefined : t); render(); }
   };
-  $('decline').onclick = () => resolveClash(null);
-  $('mullconfirm').onclick = () => { if (st.phase !== 'mulligan') return; E.mulligan(st, 0, [...mullSel]); mullSel = new Set(); E.startTurn(st); render(); };
-  $('newgame').onclick = showDeckSelect;
-  $('cancel').onclick = () => { attacking = null; targeting = null; render(); };
-  $('sound').onclick = () => { muted = !muted; $('sound').textContent = muted ? 'Sound off' : 'Sound on'; $('sound').setAttribute('aria-pressed', String(muted)); if (!muted) sound(); };
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !aiBusy) { attacking = null; targeting = null; if (st && !$('app').hidden) render(); } });
-  document.querySelectorAll('[data-deck]').forEach(b => { b.onclick = () => { deckA = b.dataset.deck; newGame(); }; });
-  if (new URLSearchParams(location.search).has('debug')) Object.defineProperty(window, '__clashbound', { value: { get state() { return st; }, get aiBusy() { return aiBusy; }, get pendingClash() { return pendingClash; } } });
+  $("decline").onclick = () => resolveClash(null);
+  $("mullconfirm").onclick = confirmMulligan;
+  $("newgame").onclick = showDeckSelect;
+  document.querySelectorAll("#deckselect button[data-deck]").forEach((b) => {
+    b.onclick = () => { deckA = b.dataset.deck; newGame(); };
+  });
+
   showDeckSelect();
 })();

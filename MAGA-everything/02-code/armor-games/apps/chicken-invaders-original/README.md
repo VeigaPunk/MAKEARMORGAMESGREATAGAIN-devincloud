@@ -1,11 +1,27 @@
-# Cluck Horizon · Special Delivery
+# Cluck Horizon — MAGA original shmup (slot #6)
 
-An original courier-versus-the-flock arcade shooter, built on `@maga/shmup-core`. Authored SVG sprites distinguish the courier, Flockbird, Glider, Bruiser, Mother Goose and Rooster Regent. A teal orbital sky, animated exhaust, weapon notices and courier-log jokes establish its own visual identity.
+Original-IP vertical shmup on the shared skeleton (`@maga/shmup-core`,
+`cluck` content pack) — courier pilot vs the flock. Same controls and loop
+as `apps/chicken-invaders`; distinct names, palette (teal/orange), weapon
+gags (Soup Laser / Spatula Spread / Whisk Barrage), and courier-log
+interstitial jokes.
 
-Run `npm run dev:cluck` from the monorepo directory to open port 5177. `npm run build -w @maga/chicken-invaders-original` produces a static build.
+**INTERNAL-NO-PUBLIC** — new IP; trademark search on "Cluck Horizon" is
+open before any public ship. No InterAction assets/marks/OST.
 
-Two sectors each contain three formations and a boss. Gifts progress Soup Laser → Spatula Spread → Whisk Barrage; ration pickups replenish missiles. Earn an extra life every 5,000 points. Sector unlocks and personal best persist under the `maga:chicken-invaders-original:` namespace.
+## Run
 
-Controls, campaign rules and automated verification commands are shared with [Chicken Invaders](../chicken-invaders/README.md). Both packs are independently covered by the simulation and browser tests. `proofs/release/` contains final title, gameplay and named-boss screenshots.
+```
+npm run dev:cluck   # from repo root → http://localhost:5177
+```
 
-This remains a private project build; public title/trademark review is separate from the playable implementation. All assets are original authored work rather than extracted InterAction material.
+## Controls / loop / debug
+
+Identical to `apps/chicken-invaders/README.md` — shared skeleton, shared
+touch layouts A/B, `?debug` → `window.__maga`. Save namespace:
+`maga:chicken-invaders-original:chapter-unlocked`.
+
+## Declared guesses
+
+Same TBD-ARCADE table as the replica (shared `sim.ts` tunables); pack
+strings/palette/jokes are original content, not guesses.

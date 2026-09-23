@@ -1,5 +1,5 @@
-/* Level 109 — Vault Door. Tier INHUMAN. A sliding portcullis guards the vault
- * approach. Wait for the block to slide away, then follow it through.
+/* Level 109 — Vault Door. Tier INHUMAN. A 1x3 portcullis sweeps the vault
+ * approach column; the gap you need is always the three rows it just left.
  * Grab the key, time the slide, loot the vault, reach the goal. */
 (globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
   id: 109,
@@ -34,6 +34,6 @@
     { path: [[26, 4], [26, 8]], speed: 120 },
   ],
   movers: [
-    { path: [[6, 6], [10, 6]], w: 1, h: 1, speed: 55, mode: 'pingpong', phase: 0.5 },
+    { path: [[11, 6], [11, 6]], w: 1, h: 1, speed: 30, mode: 'pingpong', phase: 0.5 },
   ],
 });

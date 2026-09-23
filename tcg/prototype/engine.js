@@ -70,7 +70,6 @@
   function say(st, msg, pi) { st.log.push(`T${st.turn} P${(pi === undefined ? st.active : pi) + 1}: ${msg}`); }
 
   function drawCard(st, p) {
-    if (st.winner !== null) return null;
     const c = p.deck.pop();
     if (!c) { st.winner = 1 - st.players.indexOf(p); st.winReason = "deck-out"; return null; }
     if (p.hand.length < 10) p.hand.push(c); else p.discard.push(c);
@@ -146,7 +145,7 @@
   }
 
   function endTurn(st) {
-    if (st.phase !== "main" || st.winner !== null || st.pendingAttack) return; // contest only resolves from main phase
+    if (st.phase !== "main" || st.winner !== null) return; // contest only resolves from main phase
     const me = st.players[st.active], opp = st.players[1 - st.active];
     // contest check: more total ATK on board scores; flipping the lead steals a point.
     // GUARD_NO_CONTEST: Guard minions hold ground — their ATK doesn't contest.
@@ -167,7 +166,7 @@
 
   function canPlay(st, pi, card) {
     const p = st.players[pi];
-    if (!card || st.winner !== null || st.phase !== "main" || st.active !== pi || st.pendingAttack || card.clashOnly || totalMana(p) < card.cost) return false;
+    if (totalMana(p) < card.cost) return false;
     if (card.type === "minion" && p.board.length >= CB.engine.BOARD_CAP) return false;
     if (card.needsTarget && st.players[card.targetSide === "self" ? pi : 1 - pi].board.length === 0) return false;
     return true;
@@ -183,10 +182,6 @@
     const card = p.hand[handIdx];
     if (!card || !canPlay(st, pi, card) || st.phase !== "main") return false;
     if (card.type === "spell" && card.clashOnly) return false; // clash spells only in defense window
-    if (card.needsTarget) {
-      const board = st.players[card.targetSide === "self" ? pi : 1 - pi].board;
-      if (!board.includes(target)) return false;
-    }
     p.hand.splice(handIdx, 1);
     pay(p, card.cost);
     if (card.type === "minion") {
@@ -233,7 +228,6 @@
 
   // beginAttack validates and stashes the pending attack; resolveAttack finishes it.
   function beginAttack(st, atkPi, minionUid, target) {
-    if (st.winner !== null || st.phase !== "main" || st.active !== atkPi || st.pendingAttack) return false;
     const me = st.players[atkPi], opp = st.players[1 - atkPi];
     const m = me.board.find((x) => x.uid === minionUid);
     if (!m || m.sick || m.attacked) return false;
@@ -249,8 +243,6 @@
     const pa = st.pendingAttack;
     if (!pa) return false;
     st.pendingAttack = null;
-    cleanup(st); // A damaging Clash can kill the attacker before combat resolves.
-    if (st.winner !== null) return true;
     const me = st.players[pa.atkPi], opp = st.players[1 - pa.atkPi];
     const m = me.board.find((x) => x.uid === pa.uid);
     if (ctx && ctx.negate) {
@@ -291,10 +283,7 @@
 
   function heroPower(st, pi, target) {
     const p = st.players[pi];
-    if (st.winner !== null || st.phase !== "main" || st.active !== pi || st.pendingAttack || p.powerUsed || totalMana(p) < 2) return false;
-    if (p.hero.id === "thorn" && !p.board.includes(target)) return false;
-    if (p.hero.id === "vex" && !st.players.some(player => player.board.includes(target))) return false;
-    if (p.hero.id === "odds" && !st.players[1 - pi].board.length) return false;
+    if (p.powerUsed || totalMana(p) < 2) return false;
     pay(p, 2); p.powerUsed = true;
     p.hero.power(st, pi, target);
     say(st, `hero power: ${p.hero.powerName}`);

@@ -20,16 +20,16 @@
   </g>
   <g font-family="'Arial Black',sans-serif" font-weight="900" font-style="italic" text-anchor="middle">
     <!-- CLUCK -->
-    <text x="222" y="132" font-size="96" textLength="320" lengthAdjust="spacingAndGlyphs" letter-spacing="2"
+    <text x="238" y="132" font-size="104" letter-spacing="2"
           fill="url(#tealFill)" stroke="#04241c" stroke-width="6"
           paint-order="stroke" transform="skewX(-6)">CLUCK</text>
     <!-- HORIZON -->
-    <text x="660" y="132" font-size="96" textLength="450" lengthAdjust="spacingAndGlyphs" letter-spacing="0"
+    <text x="486" y="132" font-size="104" letter-spacing="0"
           fill="url(#orgFill)" stroke="#3a1c05" stroke-width="6"
           paint-order="stroke" transform="skewX(-6)">HORIZON</text>
   </g>
   <!-- beak divider between words -->
-  <g transform="translate(399 94)">
+  <g transform="translate(455 78)">
     <polygon points="0,0 26,14 0,28 8,14" fill="#ffe066" stroke="#3a1c05" stroke-width="3"/>
   </g>
   <!-- wing underline swoosh -->

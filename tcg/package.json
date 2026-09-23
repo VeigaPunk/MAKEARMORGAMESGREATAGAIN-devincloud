@@ -1,6 +1,0 @@
-{
-  "name": "clashbound",
-  "private": true,
-  "type": "commonjs",
-  "scripts": { "test": "node --test prototype/tests/*.test.cjs", "simulate": "node prototype/sim.js --matrix 200" }
-}

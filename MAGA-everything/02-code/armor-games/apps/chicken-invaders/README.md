@@ -1,31 +1,56 @@
-# Chicken Invaders · The Next Wave
+# Chicken Invaders — MAGA native replica (slot #4)
 
-A private CI2-inspired native remake built on `@maga/shmup-core`. Art is authored vector geometry, with no original game assets or soundtrack. Exact original wave and balance parity is not claimed; the historical reference gaps remain documented in the design dossier. Public distribution requires the project's separate rights clearance.
+CI2-era formula recreate on the shared shmup skeleton (`@maga/shmup-core`,
+`replica` content pack). PixiJS 8 via pinned external ESM importmap
+(`public/vendor/pixi.min.mjs`) — the fleet-locked pattern; do not re-bundle.
 
-Run `npm run dev:chicken` from the monorepo directory; the game opens on port 5176. `npm run build -w @maga/chicken-invaders` produces a static build.
+**INTERNAL-NO-PUBLIC** — no ship until written clearance (InterAction
+studios / Prouskas). No InterAction assets, names beyond the working-title
+label, or OST; all art is placeholder vector, all audio is synth.
 
-Each of two sectors contains three formations followed by a named boss. Straight, swooping and diving groups use three visibly distinct enemy types with different speed, health and score. The final boss has a five-egg aimed volley and a telegraphed sixteen-egg burst. Beating sector one unlocks sector two and safely clears the previous battlefield; winning the campaign shows the final and best score.
+## Run
 
-Gifts upgrade through three weapons without downgrading the strongest one. Drumsticks replenish missiles, up to six. Start with three lives; every 5,000 points grants another life, capped at five. Respawn takes 1.2 seconds and grants two seconds of protection. Best score and sector unlocks persist independently per game.
-
-| Action | Control |
-| --- | --- |
-| Move | WASD / arrows |
-| Fire | Space / Z / left mouse |
-| Missile | X / Shift / right mouse |
-| Pause / resume | Esc / P / toolbar; tap paused field to resume |
-| Title / results | Enter / R / tap |
-
-Portrait touch uses a relative drag pad with autofire, plus labelled fire and missile buttons at least 44 CSS pixels across. Leaving the window pauses the game and releases every held control. Toolbar clicks restore game focus.
-
-Debug builds opened with `?debug` expose `{sim,input,touch,renderer,app,state}` on `window.__maga`. Storage keys are `maga:chicken-invaders:chapter-unlocked` and `maga:chicken-invaders:best-score`.
-
-Verification commands, with the monorepo dependencies and outer-root browser test dependencies installed:
-
-```sh
-node --test packages/shmup-core/tests/campaign.test.mjs
-# Both shooter dev servers must be running for browser checks:
-node --test packages/shmup-core/tests/browser.test.mjs
+```
+npm run dev:chicken   # from repo root → http://localhost:5176
 ```
 
-The simulation tests complete both campaigns through a seeded pilot that uses only movement, normal shots and missiles; separate tests cover loss/respawn, persistence, corrupt saves, reward progression, and single-fire boss telegraphs. Browser tests cover both packs' controls, boss/result rendering, portrait touch release, pause and toolbar focus. Final screenshots are in `proofs/release/`.
+## Controls
+
+- Move: Arrows / WASD (inertial — float feel)
+- Fire: Space / Z / LMB (held)
+- Missile: X / Shift / RMB
+- Pause: Esc / P · End screens: R / Enter / tap
+- Touch (coarse pointers): left 55% = relative drag-pad (drag also
+  auto-fires — one-thumb layout B); FIRE + MISSILE buttons bottom-right
+  (twin-thumb layout A). Zones active only during gameplay.
+
+## Loop (v1 slice)
+
+Title → chapter select (1–2, CH2 locked until CH1 boss down) → 2 waves of
+formation chickens (straight/swoop/dive + aimed eggs) → boss (volley +
+telegraphed radial) → chapter clear → unlock persist
+(`maga:chicken-invaders:chapter-unlocked`) → win after CH2.
+
+Gifts cycle 3 weapons; drumsticks refill missiles (cap 6). 3 lives,
+respawn ≤2s (spec hook 6), invuln blink 2s.
+
+## Declared guesses (ALL TBD from ARCADE playtest)
+
+Every combat numeric in `packages/shmup-core/src/sim.ts` — ship accel/damp,
+fire rate, bullet/missile/egg velocities, damage, lives, formation geometry
+(FORM_CW/CH/OY — proto P-1 fix), wave tables, boss HP/patterns, drop rates,
+music bed notes.
+
+## Proto divergences (recorded)
+
+- **P-1** proto `spawnWave()` used undeclared `ox/cw/oy/ch2` → crash on
+  start; declared here as tunables.
+- **P-2** proto boss radial telegraph re-fired every frame in a ~3-frame
+  window (~36 eggs); fires once on telegraph expiry here.
+- Pack-swap title button dropped — each app ships exactly one pack
+  (replica here, cluck in `chicken-invaders-original`).
+
+## Debug
+
+`?debug` exposes `window.__maga` = `{ sim, input, touch, state }` —
+`state` mirrors the proto's `__proto` snapshot shape.

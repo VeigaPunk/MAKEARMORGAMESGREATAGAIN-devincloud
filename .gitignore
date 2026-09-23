@@ -7,8 +7,3 @@ dist/
 config/
 scripts/
 ssot/
-
-# Generated release checks
-test-results/
-verification/browser-report/
-releases/

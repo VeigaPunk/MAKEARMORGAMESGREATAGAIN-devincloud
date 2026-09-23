@@ -47,7 +47,7 @@ export const ROOMS: ArenaRoom[] = [
       { x: 320, y: 300 },
     ],
     spawn: { x: 320, y: 200 },
-    spawn2: { x: 270, y: 300 },
+    spawn2: { x: 320, y: 300 },
   },
 ];
 
@@ -67,18 +67,6 @@ export const WAVE_TABLES: WaveTable[] = [
   { count: 9, speed: 40, runners: 2, spawnEvery: 1.1 },
   { count: 14, speed: 46, runners: 4, spawnEvery: 0.85 },
 ];
-
-/** Intro waves teach the room; survival keeps escalating without a hard stop. */
-export function waveFor(number: number): WaveTable {
-  if (number <= WAVE_TABLES.length) return WAVE_TABLES[Math.max(0, number - 1)];
-  const escalation = number - WAVE_TABLES.length;
-  return {
-    count: Math.min(60, 14 + escalation * 5),
-    speed: Math.min(72, 46 + escalation * 2),
-    runners: Math.min(24, 4 + escalation * 2),
-    spawnEvery: Math.max(0.28, 0.85 - escalation * 0.055),
-  };
-}
 
 /**
  * ScoreSystem — streak multiplier + weapon ladder stubs.
@@ -127,7 +115,7 @@ export function fireDelay(w: WeaponTier): number {
   switch (w) {
     case 'uzi': return 0.14;
     case 'shotgun': return 0.5;
-    case 'grenades': return 0.8; // explosive splash rounds
+    case 'grenades': return 0.8; // stub: grenades not implemented yet, fires single
     default: return 0.34;
   }
 }

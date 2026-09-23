@@ -24,8 +24,8 @@ export type Keymap = Record<string, Action>;
 /** P1 in versus/2P: WASD move only (arrows belong to P2) */
 export const KEYMAP_P1_VERSUS: Keymap = {
   KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right',
-  Space: 'fire', Enter: 'fire',
-  KeyE: 'action', KeyM: 'action',
+  Space: 'fire', KeyJ: 'fire', Enter: 'fire',
+  KeyE: 'action', KeyK: 'action', KeyM: 'action',
   Digit1: 'slot1', Digit2: 'slot2', Digit3: 'slot3',
   Escape: 'pause', KeyP: 'pause',
 };
@@ -33,7 +33,6 @@ export const KEYMAP_P1_VERSUS: Keymap = {
 /** P1 in solo: WASD + arrows (single player owns the whole keyboard) */
 export const KEYMAP_P1_SOLO: Keymap = {
   ...KEYMAP_P1_VERSUS,
-  KeyJ: 'fire', KeyK: 'action',
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
 };
 
@@ -56,8 +55,6 @@ export interface PointerState {
   y: number;
   /** true if the last press was a short tap (action trigger) */
   tapped: boolean;
-  /** Latched on pointerdown, including taps shorter than one animation frame. */
-  pressed: boolean;
   /** true after the first real pointer event (headless/boot position is not a real aim) */
   seen: boolean;
 }
@@ -76,19 +73,10 @@ export class Input {
   private overrides: { p1?: Keymap; p2?: Keymap } = {};
   private map1: Keymap = { ...KEYMAP_P1_SOLO };
   private map2: Keymap = { ...KEYMAP_P2 };
-  readonly pointer: PointerState = { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false };
-  private held = new Set<string>();
-
-  reset(): void {
-    this.held.clear();
-    this.p1.down.clear(); this.p1.pressed.clear();
-    this.p2.down.clear(); this.p2.pressed.clear();
-    this.pointer.active = this.pointer.tapped = this.pointer.pressed = false;
-  }
+  readonly pointer: PointerState = { active: false, x: 0, y: 0, tapped: false, seen: false };
 
   /** switch keyboard ownership: solo = P1 gets everything; versus = split */
   setMode(mode: InputMode): void {
-    this.reset();
     this.mode = mode;
     this.rebuild();
   }
@@ -102,14 +90,12 @@ export class Input {
   /** attach to the canvas (or window) that receives events */
   attach(canvas: HTMLCanvasElement, toLogical: (cx: number, cy: number) => { x: number; y: number }): void {
     window.addEventListener('keydown', (e) => {
-      if (e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || (e.target.tagName === 'BUTTON' && (e.code === 'Space' || e.code === 'Enter')))) return;
       // rebind hook: maps are live, lookups happen per event; a code may be
       // bound on both players (user rebind) — feed every bound player
       const a1 = this.map1[e.code];
       const a2 = this.map2[e.code];
       if (a1 === undefined && a2 === undefined) return;
       e.preventDefault();
-      this.held.add(e.code);
       if (a1 !== undefined) {
         if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
         this.p1.down.add(a1);
@@ -120,14 +106,11 @@ export class Input {
       }
     });
     window.addEventListener('keyup', (e) => {
-      this.held.delete(e.code);
       const a1 = this.map1[e.code];
       const a2 = this.map2[e.code];
-      if (a1 && ![...this.held].some(code => this.map1[code] === a1)) this.p1.down.delete(a1);
-      if (a2 && ![...this.held].some(code => this.map2[code] === a2)) this.p2.down.delete(a2);
+      if (a1) this.p1.down.delete(a1);
+      if (a2) this.p2.down.delete(a2);
     });
-    window.addEventListener('blur', () => this.reset());
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.reset(); });
 
     const toLocal = (e: PointerEvent) => {
       const r = canvas.getBoundingClientRect();
@@ -137,7 +120,6 @@ export class Input {
     canvas.addEventListener('pointerdown', (e) => {
       const p = toLocal(e);
       this.pointer.active = true;
-      this.pointer.pressed = true;
       this.pointer.seen = true;
       this.pointer.x = p.x; this.pointer.y = p.y;
       this.pointer.tapped = false;
@@ -149,16 +131,12 @@ export class Input {
       // track hover always (aim), drag intent only while held (moveAxis)
       this.pointer.x = p.x; this.pointer.y = p.y;
     });
-    const release = (e: PointerEvent) => {
-      if (!this.pointer.active) return;
-      const p = toLocal(e);
-      this.pointer.x = p.x; this.pointer.y = p.y;
+    const release = () => {
       this.pointer.active = false;
       this.pointer.tapped = true; // short-press semantics: tap = action
     };
     canvas.addEventListener('pointerup', release);
-    canvas.addEventListener('pointercancel', () => { this.pointer.active = false; this.pointer.pressed = false; this.pointer.tapped = false; });
-    canvas.addEventListener('lostpointercapture', () => { this.pointer.active = false; });
+    canvas.addEventListener('pointercancel', release);
   }
 
   // --- P1 (backward-compatible API) -------------------------------------------
@@ -220,6 +198,5 @@ export class Input {
     this.p1.pressed.clear();
     this.p2.pressed.clear();
     this.pointer.tapped = false;
-    this.pointer.pressed = false;
   }
 }
