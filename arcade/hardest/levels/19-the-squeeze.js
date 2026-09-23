@@ -1,0 +1,31 @@
+/* Level 19 — The Squeeze. Teaches: commit or wait through tight corridors with threading patrols. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 19,
+  name: 'The Squeeze',
+  map: [
+    '##########################',
+    '#SS...#........#.........#',
+    '#....C#........#....C....#',
+    '#....##........#.........#',
+    '#..................#######',
+    '###########.##############',
+    '#.........K..............#',
+    '#.##########.##########..#',
+    '#..........C.............#',
+    '#..##########.#########..#',
+    '#....................C...#',
+    '#######.##################',
+    '#.......................G#',
+    '#.......................G#',
+    '##########################',
+  ],
+  patrols: [
+    { path: [[2, 1], [5, 1]], speed: 110, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[8, 2], [14, 2]], speed: 120, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[16, 4], [18, 4]], speed: 130, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[2, 6], [10, 6]], speed: 140, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[13, 8], [21, 8]], speed: 150, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[2, 10], [10, 10]], speed: 160, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[14, 12], [22, 12]], speed: 170, mode: 'pingpong', r: 6, phase: 0.5 },
+  ],
+});

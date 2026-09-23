@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Chicken Invaders — MAGA native replica</title>
+<style>
+  html, body { margin:0; background:#151327; height:100%; overflow:hidden; color:#e7f0ec; }
+  canvas { position:fixed; left:0; top:0; touch-action:none; image-rendering:pixelated; outline:none; }
+  .badge { position:fixed; top:0; left:0; right:0; height:48px; box-sizing:border-box; z-index:10;
+    display:flex; align-items:center; gap:20px; padding:0 190px 0 18px;
+    border-bottom:1px solid #ffffff19; background:#151327; color:#ffe066; font:12px/1.3 ui-monospace,monospace; letter-spacing:.08em; }
+  .badge a { color:#a4b7b5; text-decoration:none; font-size:10px; letter-spacing:0; white-space:nowrap; }
+  .badge strong { white-space:nowrap; }
+  .edition { color:#8eaaa4; font-size:10px; white-space:nowrap; }
+  .mute { position:fixed; top:8px; right:8px; z-index:11; min-height:32px; padding:5px 10px;
+    background:#ffffff08; color:#ffe066; border:1px solid #ffffff28; font:10px/1 ui-monospace,monospace; cursor:pointer; }
+  .pause { right:98px; }
+  .mute:hover { background:#ffffff14; }
+  .mute:focus-visible,.badge a:focus-visible { outline:2px solid #ffe066; outline-offset:3px; }
+  @media(max-width:700px) { .edition { display:none; } .badge { gap:10px; padding-left:10px; font-size:10px; letter-spacing:0; } .badge a { font-size:0; } .badge a::before { content:'←'; font-size:16px; } }
+</style>
+<script type="importmap">
+  { "imports": { "pixi.js": "./vendor/pixi.min.mjs" } }
+</script>
+  <script type="module" crossorigin src="./assets/index-CUG70eDk.js"></script>
+<link rel="icon" href="../favicon.svg"><script defer src="../return.js"></script></head>
+<body>
+<div class="badge"><a href="../" aria-label="Back to arcade">← ARCADE</a><strong>CHICKEN INVADERS</strong><span class="edition">THE NEXT WAVE</span></div>
+<button id="pause" class="mute pause" type="button" aria-label="Pause or resume game">PAUSE</button>
+<button id="mute" class="mute" type="button">SOUND ON</button>
+
+</body>
+</html>

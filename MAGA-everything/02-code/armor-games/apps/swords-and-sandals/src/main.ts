@@ -1,53 +1,151 @@
-import { Sfx, fitIntegerScale, letterboxOffset, load, save, viewport } from '@maga/arcade-core';
+import { Sfx, load, save } from '@maga/arcade-core';
+import { STATS, LOOKS, opponents, tournaments, isHeavyTurn, items, freshSave, readSave, recover, buy, startCombat, playTurn } from './model';
+import type { Action, Combat, Stat, Look } from './model';
+import { createArena } from './art';
 
-type Stat = 'strength'|'agility'|'vitality'|'defense';
-type Mode = 'create'|'hub'|'arena'|'shop'|'complete';
-interface Gladiator { name:string; look:string; stats:Record<Stat,number>; hp:number; maxHp:number; gold:number; xp:number; level:number; weapon:number; armor:number; potions:number }
-interface Opponent { name:string; hp:number; maxHp:number; strength:number; defense:number }
-interface SaveData { gladiator:Gladiator; defeated:number; owned?:string[] }
-const STATS:Stat[]=['strength','agility','vitality','defense'];
-const opponents=[{name:'Tin Can Tim',hp:34,strength:6,defense:2},{name:'Baron Bonk',hp:48,strength:8,defense:4},{name:'The Sand Snorter',hp:62,strength:10,defense:5},{name:'Emperor’s Champion',hp:78,strength:12,defense:7}];
-const items=[{name:'Bent Bronze Sword',kind:'weapon',price:22,gate:1,bonus:2},{name:'Lucky Sandals',kind:'armor',price:38,gate:2,bonus:3},{name:'Imperial Buckler',kind:'armor',price:65,gate:2,bonus:5}];
-const stage=document.querySelector<HTMLCanvasElement>('#stage')!; const ctx=stage.getContext('2d')!; const hud=document.querySelector('#hud')!; const chrome=document.querySelector('#chrome')!; const actions=document.querySelector('#actions')!; const logEl=document.querySelector('#log')!; const sfx=new Sfx();
-function validSave(s:SaveData|null):s is SaveData{const g=s?.gladiator;return !!g&&Number.isInteger(s.defeated)&&s.defeated>=0&&s.defeated<=opponents.length&&typeof g.name==='string'&&typeof g.look==='string'&&(['strength','agility','vitality','defense'] as Stat[]).every(k=>typeof g.stats?.[k]==='number')&&(['hp','maxHp','gold','xp','level','weapon','armor','potions'] as const).every(k=>typeof g[k]==='number')&&(s.owned===undefined||Array.isArray(s.owned)&&s.owned.every(x=>typeof x==='string'))}
-let selectedLook='Scarlet', logLines=['Welcome, challenger.']; let opponent:Opponent|null=null; let turn=0; let guarded=false; let rawSave=load<SaveData|null>('swords-and-sandals','slot',null); let saveData=validSave(rawSave)?rawSave:null; let defeated=saveData?.defeated ?? 0, owned=saveData?.owned ?? []; let mode:Mode=saveData?(defeated>=opponents.length?'complete':'hub'):'create', points=saveData?0:6; let g:Gladiator=saveData?.gladiator ?? {name:'',look:selectedLook,stats:{strength:2,agility:2,vitality:2,defense:2},hp:30,maxHp:30,gold:0,xp:0,level:1,weapon:0,armor:0,potions:2};
-function log(s:string){logLines=[s,...logLines].slice(0,8);logEl.innerHTML=logLines.map(x=>`<div>${x}</div>`).join('')}
-function persist(){save('swords-and-sandals','slot',{gladiator:g,defeated,owned} satisfies SaveData)}
-function level(){g.level=1+Math.floor(g.xp/40);}
-function render(){hud.innerHTML=`<span>${mode.toUpperCase()} · ${g.name||'Unnamed gladiator'}</span><span>HP ${g.hp}/${g.maxHp} · Gold ${g.gold} · XP ${g.xp} · Lv ${g.level}</span>`; chrome.innerHTML=''; actions.innerHTML=''; if(mode==='create') renderCreate(); else if(mode==='hub') renderHub(); else if(mode==='arena') renderArena(); else if(mode==='shop') renderShop(); else {chrome.innerHTML='<h1>V1 COMPLETE</h1><p>The short arena ladder is conquered. Your save remains safe.</p>'; addButton('Return to Hub',()=>{mode='hub';render()})} draw();}
-function addButton(text:string,fn:()=>void,disabled=false){const b=document.createElement('button');b.textContent=text;b.disabled=disabled;b.onclick=()=>{sfx.preset('ui');fn()};actions.appendChild(b)}
-function renderCreate(){chrome.innerHTML=`<h1>Create Gladiator</h1><p>Look preset: <b>${selectedLook}</b> <img class="portrait" src="portrait-${selectedLook.toLowerCase()}.svg" alt="${selectedLook} gladiator portrait"></p><div class="grid">${['Scarlet','Azure','Gold'].map(x=>`<button class="lookbtn" data-look="${x}"><img src="portrait-${x.toLowerCase()}.svg" alt="">${x}</button>`).join('')}</div><p>Skill points remaining: <b>${points}</b></p><div class="grid">${STATS.map(k=>`<button data-stat="${k}">${k}: ${g.stats[k]} +</button>`).join('')}</div><input id="name" placeholder="Gladiator name">`;const nameInput=chrome.querySelector<HTMLInputElement>('#name')!;nameInput.value=g.name;chrome.querySelectorAll<HTMLButtonElement>('[data-look]').forEach(b=>b.onclick=()=>{selectedLook=b.dataset.look!;g.look=selectedLook;render()});chrome.querySelectorAll<HTMLButtonElement>('[data-stat]').forEach(b=>b.onclick=()=>{const k=b.dataset.stat as Stat;if(points){g.stats[k]++;points--;g.maxHp=24+g.stats.vitality*4;g.hp=g.maxHp;render()}});addButton('Enter the Arena',()=>{g.name=(nameInput.value||'Unnamed Gladiator').slice(0,24);g.maxHp=24+g.stats.vitality*4;g.hp=g.maxHp;mode='hub';persist();render()},points>0)}
-function renderHub(){chrome.innerHTML=`<h1>Hub — ${g.look}</h1><p class="gladiator-name"></p><p><img class="portrait" src="portrait-${g.look.toLowerCase()}.svg" alt="${g.look} gladiator portrait"></p><p>INTERNAL watermark: native replica slice. Prepare for the next bout.</p><p>Weapon +${g.weapon} · Armor +${g.armor} · Potions ${g.potions}</p>`;chrome.querySelector('.gladiator-name')!.textContent=g.name; if(defeated<opponents.length)addButton(defeated?'Next Opponent':'Start First Bout',startFight);addButton('Visit Smithy / Armory',()=>{mode='shop';render()})}
-function renderArena(){if(!opponent)return;chrome.innerHTML=`<h1>Arena: ${opponent.name}</h1><p>Opponent HP ${opponent.hp}/${opponent.maxHp} · ${guarded?'Opponent is off-balance.':''}</p>`;addButton('Attack',()=>act('attack'));addButton('Special',()=>act('special'));addButton(`Potion (${g.potions})`,()=>act('potion'),g.potions<1||g.hp===g.maxHp);addButton('End Turn',()=>enemyTurn())}
-function renderShop(){chrome.innerHTML='<h1>Smithy / Armory</h1><p>Buy one item, then return to the arena.</p><div class="grid">'+items.map((it,i)=>{const isOwned=owned.includes(it.name);return `<button data-item="${i}" ${isOwned||g.level<it.gate||g.gold<it.price?'disabled':''}>${it.name}<br>${isOwned?'Owned':`${it.price} gold · level ${it.gate}`}</button>`}).join('')+'</div>';chrome.querySelectorAll<HTMLButtonElement>('[data-item]').forEach(b=>b.onclick=()=>{const it=items[Number(b.dataset.item)];if(owned.includes(it.name))return;g.gold-=it.price;owned.push(it.name);if(it.kind==='weapon')g.weapon=Math.max(g.weapon,it.bonus);else g.armor=Math.max(g.armor,it.bonus);persist();log(`Bought ${it.name}. The smith nods solemnly.`);render()});addButton('Back to Hub',()=>{mode='hub';render()})}
-function startFight(){const o=opponents[Math.min(defeated,opponents.length-1)];opponent={...o,maxHp:o.hp};turn=0;guarded=false;mode='arena';log(`The crowd chants for ${o.name}.`);render()}
-function act(kind:'attack'|'special'|'potion'){if(!opponent)return;if(kind==='potion'){g.potions--;g.hp=Math.min(g.maxHp,g.hp+12);log('Potion consumed. It tastes like heroic fruit.');enemyTurn();return}turn++;const bonus=g.weapon;const chance=0.55+g.stats.agility*.04;const hit=Math.random()<chance; if(!hit){log('Miss! Your sword demonstrates interpretive dance.');enemyTurn();return}const crit=Math.random()<0.08+g.stats.agility*.01;let damage=(kind==='special'?7:4)+g.stats.strength+bonus+(crit?5:0);damage=Math.max(1,damage-opponent.defense);opponent.hp=Math.max(0,opponent.hp-damage);guarded=kind==='special';sfx.preset(crit?'hit':'shoot');log(`${crit?'Critical bonk! ':'Hit! '}${opponent.name} takes ${damage}.`);if(opponent.hp===0){win();return}enemyTurn()}
-function enemyTurn(){if(!opponent)return;const damage=Math.max(1,opponent.strength+Math.floor(Math.random()*3)-g.stats.defense-Math.floor(g.armor/2)-(guarded?3:0));guarded=false;g.hp=Math.max(0,g.hp-damage);log(`${opponent.name} replies with a theatrical thump for ${damage}.`);if(g.hp===0){log('Defeat! The healer drags you back to the hub.');g.hp=g.maxHp;mode='hub';persist()}render()}
-function win(){if(!opponent)return;const reward=18+defeated*8;g.gold+=reward;g.xp+=22;level();defeated++;log(`Victory! Earned ${reward} gold and XP.`);g.hp=g.maxHp;persist();sfx.preset('pickup');mode=defeated>=opponents.length?'complete':'hub';render()}
-function draw(){const vp=viewport();const scale=fitIntegerScale(800,420,vp);const off=letterboxOffset(800,420,scale,vp);void scale;void off;ctx.clearRect(0,0,800,420);
-// dusk sky bands (warm)
-ctx.fillStyle='#4a2033';ctx.fillRect(0,0,800,60);ctx.fillStyle='#6e2f33';ctx.fillRect(0,60,800,55);ctx.fillStyle='#a8542f';ctx.fillRect(0,115,800,45);ctx.fillStyle='#d98e4a';ctx.fillRect(0,160,800,30);
-// sun low over the wall
-ctx.fillStyle='#ffcf6e';ctx.beginPath();ctx.arc(660,150,26,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffe3a1';ctx.beginPath();ctx.arc(660,150,18,0,Math.PI*2);ctx.fill();
-// colosseum wall with arches
-ctx.fillStyle='#6e4a2f';ctx.fillRect(0,92,800,86);ctx.fillStyle='#8a5f38';ctx.fillRect(0,92,800,6);
-for(let x=16;x<800;x+=64){ctx.fillStyle='#2a1420';ctx.fillRect(x,118,32,60);ctx.beginPath();ctx.arc(x+16,118,16,Math.PI,0);ctx.fill();ctx.fillStyle='#9c6c40';ctx.fillRect(x-4,112,4,66);ctx.fillRect(x+32,112,4,66);}
-ctx.fillStyle='#54371f';ctx.fillRect(0,178,800,12);
-// crowd: two tiers of silhouettes with warm flecks (deterministic pattern)
-for(let row=0;row<2;row++){const y=196+row*16;for(let i=0;i<50;i++){const x=8+i*16+(row%2)*8;ctx.fillStyle=(i*7+row*3)%9===0?'#e8a34e':'#2a1622';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.fillRect(x-5,y,10,7);}}
-ctx.fillStyle='#54371f';ctx.fillRect(0,222,800,14);
-// sand floor with perspective bands + speckles
-ctx.fillStyle='#d9a45f';ctx.fillRect(0,236,800,184);ctx.fillStyle='#c68d48';ctx.fillRect(0,236,800,10);ctx.fillRect(0,290,800,8);ctx.fillRect(0,350,800,12);
-for(let i=0;i<90;i++){const x=(i*89+37)%800;const y=248+(i*53)%165;ctx.fillStyle=i%3?'#b57a3c':'#e8bd7d';ctx.fillRect(x,y,3,2);}
-// wordmark + native-replica qualifier
-ctx.font='bold 34px monospace';ctx.fillStyle='#3a1420';ctx.fillText('SWORDS & SANDALS',26,52);ctx.fillStyle='#ffd166';ctx.fillText('SWORDS & SANDALS',24,50);
-ctx.font='14px monospace';ctx.fillStyle='#f3d9c0';ctx.fillText('native replica',26,72);
-if(mode==='arena'){ctx.font='bold 16px monospace';ctx.fillStyle='#3a1420';ctx.fillText('ARENA OF BONKS',27,93);ctx.fillStyle='#ffb3b3';ctx.fillText('ARENA OF BONKS',26,92);}
-// fighters (player tinted by look preset)
-const lookColor=g.look==='Azure'?'#3f8ce0':g.look==='Gold'?'#e6b83c':'#d43a3a';
-ctx.fillStyle='#a8763c';ctx.beginPath();ctx.ellipse(230,286,64,12,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(570,286,64,12,0,0,Math.PI*2);ctx.fill();
-ctx.fillStyle=lookColor;ctx.beginPath();ctx.arc(230,220,55,0,Math.PI*2);ctx.fill();ctx.fillStyle='#60a5fa';ctx.beginPath();ctx.arc(570,220,55,0,Math.PI*2);ctx.fill();
-ctx.strokeStyle='#2a1420';ctx.lineWidth=3;ctx.beginPath();ctx.arc(230,220,55,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(570,220,55,0,Math.PI*2);ctx.stroke();}
-(document.querySelector('#mute') as HTMLButtonElement).onclick=()=>{sfx.muted=!sfx.muted;(document.querySelector('#mute') as HTMLButtonElement).textContent=sfx.muted?'SOUND OFF':'SOUND ON'};
-if(location.search.includes('debug')){(window as unknown as {__maga:unknown}).__maga={get mode(){return mode},get screen(){return mode},get gladiatorStats(){return {...g.stats}},get hp(){return g.hp},get gold(){return g.gold},get xp(){return g.xp},get level(){return g.level},get opponent(){return defeated},get opponentHp(){return opponent?.hp??0},get shop(){return items.map(x=>({...x}))},get savePresent(){return load<SaveData|null>('swords-and-sandals','slot',null)!==null}}}
-render();
+type Mode = 'create' | 'hub' | 'arena' | 'shop' | 'complete';
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id)! as T;
+const chrome = $('chrome'), actions = $('actions'), logEl = $('log');
+const rawSave = load<unknown>('swords-and-sandals', 'slot', null);
+let data = readSave(rawSave), notice = rawSave && !data ? 'Your saved gladiator could not be read. Create a new challenger to begin again.' : '';
+let state = data ?? freshSave(), mode: Mode = data ? state.defeated === opponents.length ? 'complete' : 'hub' : 'create';
+let combat: Combat | null = null, points = data ? 0 : 6, busy = false, impact = -1000, damage = 0, lastAction = '', generation = 0;
+const sfx = new Sfx(), paint = createArena($<HTMLCanvasElement>('stage'));
+const logLines: string[] = [];
+const descriptions: Record<Stat, string> = { strength: 'Damage with every strike', agility: 'Accuracy and critical hits', vitality: 'Maximum health', defense: 'Reduces incoming damage' };
+function log(message: string) {
+  logLines.unshift(message); logLines.length = Math.min(logLines.length, 10);
+  logEl.replaceChildren(...logLines.map(line => { const p = document.createElement('p'); p.textContent = line; return p; }));
+}
+function persist() { save('swords-and-sandals', 'slot', state); }
+function text(tag: string, content: string, className = '') { const el = document.createElement(tag); el.textContent = content; el.className = className; return el; }
+function button(label: string, hint: string, fn: () => void, disabled = false, parent = actions) {
+  const b = document.createElement('button'); b.type = 'button'; b.disabled = disabled || busy;
+  b.append(text('strong', label)); if (hint) b.append(text('small', hint));
+  b.onclick = () => { if (busy) return; sfx.preset('ui'); fn(); }; parent.append(b); return b;
+}
+function heading(kicker: string, title: string, description: string) { chrome.append(text('p', kicker, 'eyebrow'), text('h2', title), text('p', description, 'description')); }
+function render() {
+  const g = state.gladiator;
+  document.body.dataset.mode = mode;
+  $('player-name').textContent = g.name || 'Your challenger'; $('player-level').textContent = `LEVEL ${g.level}`;
+  $('gold').textContent = `${g.gold} GOLD`; $('xp').textContent = `${g.xp} XP`;
+  $('player-hp').textContent = `${g.hp} / ${g.maxHp}`;
+  $<HTMLProgressElement>('health').max = g.maxHp; $<HTMLProgressElement>('health').value = g.hp;
+  const enemy = combat && mode === 'arena' ? combat.opponent : opponents[Math.min(state.defeated, opponents.length - 1)];
+  $('enemy-name').textContent = mode === 'complete' ? 'The laurel is yours' : enemy.name;
+  $('enemy-hp').textContent = mode === 'arena' && combat ? `${combat.hp} / ${enemy.hp}` : `${enemy.hp} HP`;
+  $<HTMLProgressElement>('enemy-health').max = enemy.hp; $<HTMLProgressElement>('enemy-health').value = combat && mode === 'arena' ? combat.hp : enemy.hp;
+  $('enemy-status').textContent = mode === 'arena' && combat ? isHeavyTurn(combat.opponent, combat.round + 1) ? 'HEAVY STRIKE INCOMING' : `ROUND ${combat.round + 1} · NORMAL STRIKE` : state.defeated === opponents.length ? 'ARENA CONQUERED' : `BOUT ${state.defeated + 1} OF ${opponents.length}`;
+  $('enemy-status').classList.toggle('danger', mode === 'arena' && !!combat && isHeavyTurn(combat.opponent, combat.round + 1));
+  $('notice').textContent = notice; $('notice').hidden = !notice;
+  $('mute').textContent = sfx.muted ? 'Sound off' : 'Sound on'; $('mute').setAttribute('aria-pressed', String(sfx.muted));
+  const tier = Math.min(2, Math.floor(state.defeated / 4));
+  $('tournament').textContent = `${tournaments[tier]} · ${Math.min(state.defeated, opponents.length)} / ${opponents.length} victories`;
+  const ladder = $('ladder'); ladder.replaceChildren();
+  opponents.forEach((o, i) => { if (Math.floor(i / 4) !== tier) return; const el = text('span', `${i < state.defeated ? '✓' : String(i + 1).padStart(2, '0')} ${o.name}`, i < state.defeated ? 'cleared' : i === state.defeated ? 'current' : ''); ladder.append(el); });
+  chrome.replaceChildren(); actions.replaceChildren();
+  if (mode === 'create') renderCreate();
+  else if (mode === 'hub') renderHub();
+  else if (mode === 'arena') renderCombat();
+  else if (mode === 'shop') renderShop();
+  else {
+    heading('THE EMPEROR’S LAUREL', 'Champion of the arena', `${g.name}, you conquered three tournaments and all twelve challengers. Your victories and equipment are saved.`);
+    chrome.append(text('p', `${state.defeated} victories · ${g.gold} gold · Level ${g.level}`, 'result'));
+    button('View your gladiator', 'Equipment and arena record', () => { mode = 'hub'; render(); });
+    button('New gladiator', 'Begin another campaign', confirmNew);
+  }
+}
+function renderCreate() {
+  const g = state.gladiator;
+  heading('A NAME FOR THE CROWD', 'Forge your gladiator', 'Spend six points to shape your fighting style. Every build can conquer the arena.');
+  const label = text('label', 'Gladiator name'); label.setAttribute('for', 'name'); chrome.append(label);
+  const input = document.createElement('input'); input.id = 'name'; input.maxLength = 24; input.placeholder = 'Maximus'; input.value = g.name; input.autocomplete = 'off';
+  input.oninput = () => { g.name = input.value; $('player-name').textContent = g.name || 'Your challenger'; }; chrome.append(input);
+  const looks = document.createElement('div'); looks.className = 'looks';
+  LOOKS.forEach(look => { const b = button(look, '', () => { g.look = look; render(); }, false, looks); b.dataset.look = look; b.setAttribute('aria-pressed', String(g.look === look)); }); chrome.append(looks);
+  chrome.append(text('p', `${points} skill point${points === 1 ? '' : 's'} remaining`, 'points'));
+  STATS.forEach(stat => {
+    const row = document.createElement('div'); row.className = 'stat-row';
+    const label = document.createElement('span'); label.append(text('strong', stat[0].toUpperCase() + stat.slice(1)), text('small', descriptions[stat]));
+    row.append(label);
+    button('−', '', () => { g.stats[stat]--; points++; recover(g); render(); }, g.stats[stat] <= 2, row).setAttribute('aria-label', `Decrease ${stat}`);
+    row.append(text('b', String(g.stats[stat])));
+    button('+', '', () => { g.stats[stat]++; points--; recover(g); render(); }, points === 0, row).setAttribute('aria-label', `Increase ${stat}`);
+    chrome.append(row);
+  });
+  button('Enter the arena', points ? 'Allocate your remaining points' : 'Your legend starts here', () => { g.name = g.name.trim() || 'Maximus'; recover(g); mode = 'hub'; notice = ''; persist(); log('The gates open. Your first opponent awaits.'); render(); }, points > 0);
+}
+function renderHub() {
+  const g = state.gladiator;
+  heading(state.defeated === opponents.length ? 'THE HALL OF CHAMPIONS' : 'BETWEEN THE BOUTS', state.defeated === opponents.length ? 'A legend in the sand' : 'Ready for the next challenger?', 'The healer restores your health and two potions before every bout. Visit the smith to turn your winnings into an advantage.');
+  const gear = document.createElement('div'); gear.className = 'gear';
+  gear.append(text('span', `⚔ Weapon +${g.weapon}`), text('span', `◈ Armor +${g.armor}`), text('span', `✚ Potions ${g.potions}`)); chrome.append(gear);
+  if (state.defeated < opponents.length) {
+    const o = opponents[state.defeated]; chrome.append(text('p', `NEXT · ${o.name}`, 'next-opponent'), text('p', o.style, 'description'), text('p', `Win ${o.reward} gold and 22 XP.`, 'description'));
+    button(state.defeated ? 'Next opponent' : 'Start first bout', 'Enter the colosseum', () => { combat = startCombat(state); if (!combat) return; mode = 'arena'; notice = ''; log(`The crowd chants for ${combat.opponent.name}.`); render(); });
+  } else button('Champion’s laurel', 'View your victory', () => { mode = 'complete'; render(); });
+  button('Smithy & armory', 'Purchase permanent upgrades', () => { mode = 'shop'; render(); });
+}
+function renderCombat() {
+  if (!combat) return;
+  heading('CHOOSE YOUR NEXT MOVE', combat.round ? `Round ${combat.round + 1}` : 'The crowd is waiting', combat.opponent.style);
+  chrome.append(text('p', busy ? 'Steel meets steel…' : isHeavyTurn(combat.opponent, combat.round + 1) ? 'The enemy winds up a heavy strike. Guard reduces its damage by 8.' : 'A normal strike is coming. Make your move.', 'intent'));
+  button('⚔ Attack', '1 · Reliable strike', () => act('attack'));
+  button('✦ Shield breaker', combat.cooldown ? `Ready in ${combat.cooldown} turns` : '2 · Heavy strike + brace', () => act('special'), combat.cooldown > 0);
+  button(`✚ Potion (${state.gladiator.potions})`, '3 · Restore 26 HP + brace', () => act('potion'), !state.gladiator.potions || state.gladiator.hp === state.gladiator.maxHp);
+  button('◈ Guard', '4 · Block 8 damage', () => act('guard'));
+}
+function renderShop() {
+  heading('THE SMITHY & ARMORY', 'A sharper edge. A stronger shield.', 'Purchases equip immediately and remain yours. Armor upgrades replace one another.');
+  items.forEach((it, i) => {
+    const owned = state.owned.includes(it.name), better = state.gladiator[it.kind] >= it.bonus;
+    const card = document.createElement('div'); card.className = 'shop-item';
+    card.append(text('span', it.kind === 'weapon' ? '⚔' : '◈', 'item-icon'), text('h3', it.name), text('p', `+${it.bonus} ${it.kind === 'weapon' ? 'attack damage' : 'damage reduction'}`));
+    const caption = owned ? 'Owned' : better ? 'Better gear equipped' : state.gladiator.level < it.gate ? `Unlocks at level ${it.gate}` : state.gladiator.gold < it.price ? `Need ${it.price - state.gladiator.gold} more gold` : 'Buy & equip';
+    button(caption, `${it.price} gold · Level ${it.gate}`, () => { if (buy(state, i)) { notice = `${it.name} equipped.`; log(notice); persist(); sfx.preset('pickup'); render(); } }, owned || better || state.gladiator.level < it.gate || state.gladiator.gold < it.price, card);
+    chrome.append(card);
+  });
+  button('Return to the hub', 'Your next bout awaits', () => { mode = 'hub'; render(); });
+}
+function confirmNew() {
+  chrome.replaceChildren(); actions.replaceChildren();
+  heading('A NEW LEGEND', 'Retire this gladiator?', 'Starting again replaces the saved campaign with a new challenger.');
+  button('Keep my champion', '', render);
+  button('Create new gladiator', '', () => { generation++; state = freshSave(); combat = null; points = 6; mode = 'create'; notice = ''; logLines.length = 0; logEl.replaceChildren(); render(); });
+}
+function act(action: Action) {
+  if (mode !== 'arena' || !combat || busy) return;
+  const result = playTurn(state, combat, action);
+  if (!result.messages.length) return;
+  result.messages.forEach(log); damage = result.damage; lastAction = action; impact = performance.now(); busy = true;
+  sfx.preset(action === 'potion' ? 'pickup' : result.damage ? 'hit' : 'shoot');
+  render();
+  const currentGeneration = generation;
+  window.setTimeout(() => {
+    if (currentGeneration !== generation) return;
+    busy = false;
+    if (result.outcome !== 'playing') {
+      notice = result.messages.join(' ');
+      if (result.outcome === 'victory' && state.defeated < opponents.length && state.defeated % 4 === 0) notice += ` Tournament won! Welcome to ${tournaments[Math.floor(state.defeated / 4)]}.`;
+      mode = state.defeated === opponents.length ? 'complete' : 'hub';
+      persist(); sfx.preset(result.outcome === 'victory' ? 'pickup' : 'death');
+    }
+    render();
+  }, 420);
+}
+$('mute').onclick = () => { sfx.muted = !sfx.muted; $('mute').blur(); render(); };
+window.addEventListener('keydown', e => {
+  if (e.repeat || (e.target as HTMLElement).matches('input,textarea,select,[contenteditable]')) return;
+  const action = ({ '1': 'attack', '2': 'special', '3': 'potion', '4': 'guard' } as Record<string, Action>)[e.key];
+  if (action && mode === 'arena') { e.preventDefault(); act(action); }
+});
+function frame(now: number) { paint({ gladiator: state.gladiator, opponent: Math.min(state.defeated, opponents.length - 1), fighting: mode === 'arena', champion: mode === 'complete', now, impact, damage, action: lastAction }); requestAnimationFrame(frame); }
+if (new URLSearchParams(location.search).has('debug')) Object.defineProperty(window, '__maga', { value: {
+  get mode() { return mode; }, get screen() { return mode; }, get gladiatorStats() { return { ...state.gladiator.stats }; },
+  get hp() { return state.gladiator.hp; }, get gold() { return state.gladiator.gold; }, get xp() { return state.gladiator.xp; }, get level() { return state.gladiator.level; },
+  get opponent() { return state.defeated; }, get opponentHp() { return combat?.hp ?? 0; }, get shop() { return items.map(x => ({ ...x })); },
+  get snapshot() { return structuredClone({ state, combat, mode, busy }); }, get savePresent() { return load('swords-and-sandals', 'slot', null) !== null; },
+} });
+log(data ? `Welcome back, ${state.gladiator.name}. ${state.defeated} victories are recorded in the arena ledger.` : 'A new challenger approaches the gates. Choose your name and fighting style.');
+render(); requestAnimationFrame(frame);

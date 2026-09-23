@@ -10,7 +10,8 @@ export interface EnemyType {
   color: number;
   headColor: number;
   speed: number; // TBD ARCADE behavior tint multiplier
-  hp: number; // TBD ARCADE per-type durability
+  hp: number; // durability
+  score: number;
 }
 
 export interface BossType { name: string; color: number; headColor: number }
@@ -38,14 +39,14 @@ export const PACKS: Record<ContentPack['id'], ContentPack> = {
   replica: {
     id: 'replica',
     title: 'CHICKEN INVADERS',
-    sub: 'The Next Wave — formula replica slice',
+    sub: 'A two-sector arcade expedition',
     weapons: ['PEA SHOOTER', 'TWIN BOLT', 'TRI-SPREAD'],
     gift: 'GIFT',
     food: 'DRUMSTICK',
     enemyTypes: [
-      { name: 'CHICKEN', color: 0xffd43b, headColor: 0xff8787, speed: 1, hp: 2 },
-      { name: 'CHICKEN SCOUT', color: 0xffd43b, headColor: 0xff8787, speed: 1, hp: 2 },
-      { name: 'CHICKEN ACE', color: 0xffd43b, headColor: 0xff8787, speed: 1, hp: 2 },
+      { name: 'CHICKEN', color: 0xffd43b, headColor: 0xff8787, speed: 1, hp: 2, score: 100 },
+      { name: 'CHICKEN SCOUT', color: 0x9be7ff, headColor: 0x4dabf7, speed: 1.18, hp: 1, score: 125 },
+      { name: 'CHICKEN ACE', color: 0xe2b7ff, headColor: 0xb16ee0, speed: 0.88, hp: 3, score: 175 },
     ],
     bosses: [
       { name: 'BIG HEN', color: 0xffd43b, headColor: 0xff8787 },
@@ -63,14 +64,14 @@ export const PACKS: Record<ContentPack['id'], ContentPack> = {
   cluck: {
     id: 'cluck',
     title: 'CLUCK HORIZON',
-    sub: 'courier vs the flock — original IP slice',
+    sub: 'Special delivery. Hostile airspace.',
     weapons: ['SOUP LASER', 'SPATULA SPREAD', 'WHISK BARRAGE'],
     gift: 'CRATE',
     food: 'RATIONS',
     enemyTypes: [
-      { name: 'FLOCKBIRD', color: 0xffa94d, headColor: 0xffe066, speed: 1, hp: 2 },
-      { name: 'FLOCKBIRD GLIDER', color: 0xffe066, headColor: 0xffa94d, speed: 1.15, hp: 2 },
-      { name: 'FLOCKBIRD BRUISER', color: 0xffe677, headColor: 0xffc92a, speed: 0.85, hp: 3 },
+      { name: 'FLOCKBIRD', color: 0xffa94d, headColor: 0xffe066, speed: 1, hp: 2, score: 100 },
+      { name: 'FLOCKBIRD GLIDER', color: 0xffe066, headColor: 0xffa94d, speed: 1.15, hp: 2, score: 125 },
+      { name: 'FLOCKBIRD BRUISER', color: 0xffe677, headColor: 0xffc92a, speed: 0.85, hp: 3, score: 175 },
     ],
     bosses: [
       { name: 'MOTHER GOOSE', color: 0xffa94d, headColor: 0xffe066 },

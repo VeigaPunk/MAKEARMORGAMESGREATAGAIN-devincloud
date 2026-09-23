@@ -6,7 +6,7 @@ registers itself by pushing a plain object to `globalThis.HARDEST_LEVELS`:
 (globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
   id: 7,                    // integer, unique, must match filename NN
   name: 'Switchback',       // short display name
-  playerSpeed: 175,         // optional px/s override (default 175)
+  playerSpeed: 175,         // optional px/s override: >0 and <=1000 (default 175)
   map: [ '####', '#SS#', ... ],   // array of equal-length strings
   patrols: [
     { path: [[4,2],[15,2]], speed: 110, mode: 'pingpong', r: 6, phase: 0 },
@@ -69,7 +69,8 @@ key behind a door. The validator enforces this.
    rectangular map, legal chars, ≥1 `S`, ≥1 `G`, valid patrols.
 2. Reachability: BFS from start reaches every key (doors closed), every coin,
    every goal tile, every patrol waypoint (doors open + teleport edges).
-3. **Completability**: the deterministic autopilot (`autopilot.js`) must clear
+3. **Completability**: the deterministic autopilot (`autopilot.js`) holds each input
+   for a full 60Hz frame (four 240Hz physics ticks) and must clear
    the level through the real engine within 120 simulated seconds / 400 deaths.
    A level the autopilot cannot clear is NOT verified — redesign it (wider
    gaps, slower dots, more checkpoints) until it passes.

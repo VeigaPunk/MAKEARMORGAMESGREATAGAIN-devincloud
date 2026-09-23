@@ -1,44 +1,11 @@
-# Burger Tycoon (native replica)
+# Burger Tycoon
 
-**INTERNAL-NO-PUBLIC** — localhost-only build. No ship/public deploy until
-written per-title rights clearance (Molleindustria CC deed + marks review).
-Burger Tycoon branding only — **no McDonald's marks** in this build.
+A four-operation corporate satire: crops feed cattle, cattle become patties, restaurants generate revenue, and headquarters manages demand and the mounting consequences. There is no clean victory; the objective is to keep the company alive.
 
-Native TypeScript + Canvas2D rebuild of the four-pane satire tycoon
-(Farmland → Feedlot → Restaurant → HQ, one shared economy). All sim numbers
-are DECLARED GUESSES — TBD from ARCADE playtest.
+The desktop dashboard shows all four animated operations. Phones use a bottom tab bar with large native action buttons. Keys 1–4 select an operation; Escape or the toolbar pauses. Sound can be muted. The company saves after actions and periodically, and restores paused so a reload never resumes the economy without your input. Hidden tabs pause the simulation.
 
-## Run
+Shortcuts increase output while raising backlash or disease. Unaffordable actions are disabled; toggled shortcuts visibly report their state. The ledger records decisions, disease outbreaks and board interventions. Bankruptcy and reputation collapse lead to a replay screen while preserving the survival record.
 
-```bash
-# monorepo root
-npm install
-npm run dev:burger          # dev server on :5175
-npm run build -w @maga/burger-tycoon && npm run preview -w @maga/burger-tycoon
-```
+From the repository root: `npm run build && npm start`. Live development from the monorepo: `npm run dev:burger`.
 
-Open with `?debug` to expose `window.__maga` (sim/setPane/input/sfx) for
-automated acceptance.
-
-## Controls
-
-| Action | Desktop | Touch |
-|--------|---------|-------|
-| Switch pane | keys 1–4 (Digit4 bound to `action`) | DOM tab bar |
-| Action button | click | tap |
-| Restart (after game over) | Space / Enter / click | tap |
-| Mute | SOUND button (page chrome) | same |
-
-## Loop (spec §Core loop)
-
-Crops feed cattle → cattle slaughter into patties → patties sell for cash →
-overhead drains cash → board pressure punishes stalled profit. Dirty toggles
-(deforest / cheap feed / cut corners) trade output for backlash + disease.
-Cash ≤ 0 or rep ≤ 0 → game over. **No clean win** — the satire is the point.
-Sim keeps running while idle.
-
-## Structure
-
-- `src/sim.ts` — pure economy sim (ported 1:1 from `prototypes/burger-tycoon.html`)
-- `src/main.ts` — canvas renderer, DOM chrome (HUD/tabs/log), input, letterbox, SFX
-- Persistence: `maga:burger-tycoon:best-time` (longest survival, localStorage)
+`npm test` verifies clean bankruptcy, dirty-profit/backlash/disease collapse, no-op contracts and restart. The production browser suite exercises actual action buttons, saves, pause shortcuts, mobile tabs, loss and retry. Authored canvas scenes preserve the reference's flat illustrated character; no McDonald's marks or copied assets are used.

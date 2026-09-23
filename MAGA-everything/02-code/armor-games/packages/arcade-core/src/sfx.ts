@@ -15,9 +15,13 @@ export interface BlipOptions {
   volume?: number;
 }
 
+import { load, save } from './storage';
+
 export class Sfx {
   private ctx: AudioContext | null = null;
-  muted = false;
+  private _muted = load('arcade', 'muted', false);
+  get muted(): boolean { return this._muted; }
+  set muted(value: boolean) { this._muted = value; save('arcade', 'muted', value); }
   volume = 0.5;
 
   private ensure(): AudioContext | null {
@@ -28,7 +32,7 @@ export class Sfx {
         return null;
       }
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    if (this.ctx.state === 'suspended') void this.ctx.resume().catch(() => {});
     return this.ctx;
   }
 

@@ -1,0 +1,32 @@
+/* Level 38 — Warp Lanes. Fast horizontal patrol lanes; paired pads skip the nastiest crossing. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 38,
+  name: 'Warp Lanes',
+  playerSpeed: 175,
+  map: [
+    '##########################',
+    '#SS....C.................#',
+    '#........................#',
+    '#...T....................#',
+    '#..............C.........#',
+    '#........................#',
+    '#.........C..............#',
+    '#............K...........#',
+    '#........................#',
+    '#....................C...#',
+    '#........................#',
+    '#...................T...G#',
+    '#........................#',
+    '#........................#',
+    '##########################',
+  ],
+  patrols: [
+    { path: [[2, 2], [23, 2]], speed: 140, mode: 'pingpong' },
+    { path: [[2, 4], [23, 4]], speed: 165, mode: 'pingpong', phase: 0.5 },
+    { path: [[2, 6], [23, 6]], speed: 190, mode: 'pingpong' },
+    { path: [[2, 8], [23, 8]], speed: 175, mode: 'pingpong', phase: 0.5 },
+    { path: [[2, 10], [23, 10]], speed: 200, mode: 'pingpong' },
+    { path: [[6, 2], [6, 12]], speed: 150, mode: 'pingpong', phase: 0.5 },
+    { path: [[16, 2], [16, 12]], speed: 185, mode: 'pingpong' },
+  ],
+});

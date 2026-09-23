@@ -1,5 +1,7 @@
 # Make Armor Games Great Again — monorepo
 
+**Current release:** use the [repository README](../../../README.md) for the complete eight-game collection, production build, and verification commands. The scope tables below describe the original six-app workspace; current shipped content is recorded in [the release report](../../../verification/RELEASE.md).
+
 > **INTERNAL-NO-PUBLIC.** Internal R&D under idea 001 (João, 2026-09-22).
 > From-scratch native replicas for local development only. No public shipping,
 > deploying, or sharing of any kind until per-title written clearance from the

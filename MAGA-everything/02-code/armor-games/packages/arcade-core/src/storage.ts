@@ -14,7 +14,14 @@ export function save<T>(game: string, key: string, value: T): void {
 export function load<T>(game: string, key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(PREFIX + game + ':' + key);
-    return raw === null ? fallback : (JSON.parse(raw) as T);
+    if (raw === null) return fallback;
+    const value: unknown = JSON.parse(raw);
+    // Complex saves have title-specific schemas; primitive scores/settings must
+    // never become null, objects, or non-finite numbers after a corrupt import.
+    if (typeof fallback === 'number' && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) return fallback;
+    if (typeof fallback === 'boolean' && typeof value !== 'boolean') return fallback;
+    if (typeof fallback === 'string' && typeof value !== 'string') return fallback;
+    return value as T;
   } catch {
     return fallback;
   }

@@ -29,7 +29,8 @@ export class TouchControls {
   private stickPointer = -1;
   private stickOrigin = { x: 0, y: 0 };
   private firePointer = -1;
-  private baseAlpha = 0.42;
+  private baseAlpha = 0.6;
+  private displayScale = 1;
 
   private stickBase!: Graphics;
   private stickKnob!: Graphics;
@@ -49,6 +50,7 @@ export class TouchControls {
       return toLogical(e.clientX - r.left, e.clientY - r.top);
     };
     canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'touch') return;
       this.coarse = this.coarse || e.pointerType === 'touch';
       if (!this.visibleTarget()) return;
       const p = toLocal(e);
@@ -100,13 +102,25 @@ export class TouchControls {
     // Release can occur outside the canvas when a finger leaves the viewport.
     window.addEventListener('pointerup', release);
     window.addEventListener('pointercancel', release);
+    canvas.addEventListener('lostpointercapture', release);
+    window.addEventListener('blur', () => this.reset());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.reset(); });
   }
 
   /** gameplay gate — menus/end screens leave every touch to Input (D-14) */
   setActive(v: boolean): void {
     this.active = v;
+    if (!v) this.reset();
     this.applyVisibility();
   }
+
+  private reset(): void {
+    this.stick = null; this.fire = false; this.stickPointer = -1; this.firePointer = -1;
+    this.drawStick(); this.drawFire();
+  }
+
+  setScale(scale: number): void { this.displayScale = Math.min(1, Math.max(0.2, scale)); this.drawFire(); }
+  private fireRadius() { return Math.max(FIRE_R, 22 / this.displayScale); }
 
   private stickHome() { return { x: 78, y: this.stageH - 74 }; }
   private fireHome() { return { x: this.stageW - 66, y: this.stageH - 70 }; }
@@ -118,7 +132,7 @@ export class TouchControls {
 
   private inFireZone(p: { x: number; y: number }): boolean {
     const h = this.fireHome();
-    return Math.hypot(p.x - h.x, p.y - h.y) < FIRE_R * 1.9;
+    return Math.hypot(p.x - h.x, p.y - h.y) < this.fireRadius() + 12;
   }
 
   private visibleTarget(): boolean {
@@ -151,9 +165,12 @@ export class TouchControls {
   private drawFire(): void {
     const h = this.fireHome();
     this.fireBtn.clear()
-      .circle(h.x, h.y, FIRE_R)
+      .circle(h.x, h.y, this.fireRadius())
       .fill({ color: this.fire ? 0xd43a3a : 0x8a2430, alpha: 0.85 })
-      .stroke({ width: 2, color: 0xf5c542, alpha: 0.9 });
+      .stroke({ width: 2, color: 0xf5c542, alpha: 0.9 })
+      .circle(h.x,h.y,8).stroke({width:2,color:0xffedab})
+      .moveTo(h.x-13,h.y).lineTo(h.x+13,h.y).stroke({width:2,color:0xffedab})
+      .moveTo(h.x,h.y-13).lineTo(h.x,h.y+13).stroke({width:2,color:0xffedab});
   }
 
   private applyVisibility(): void {
@@ -167,6 +184,7 @@ export class TouchControls {
 
   /** call each frame; re-checks the coarse-pointer media query cheaply */
   tick(): void {
+    this.drawFire();
     this.applyVisibility();
   }
 }

@@ -1,0 +1,31 @@
+/* Level 18 — Diagonal. Teaches: read crossing diagonal patrols and time safe windows in open space. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 18,
+  name: 'Diagonal',
+  playerSpeed: 175,
+  map: [
+    '########################',
+    '#SS....................#',
+    '#..C...................#',
+    '#......................#',
+    '#..................C...#',
+    '#......................#',
+    '#.........KK...........#',
+    '#......................#',
+    '#...C..................#',
+    '#......................#',
+    '#....................C.#',
+    '#......................#',
+    '#......................#',
+    '#....................GG#',
+    '########################',
+  ],
+  patrols: [
+    { path: [[3, 2], [18, 10]], speed: 120, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[18, 2], [4, 10]], speed: 130, mode: 'pingpong', r: 6, phase: 0.5 },
+    { path: [[7, 3], [19, 11]], speed: 140, mode: 'pingpong', r: 6, phase: 0.25 },
+    { path: [[16, 3], [3, 11]], speed: 150, mode: 'pingpong', r: 6, phase: 0.75 },
+    { path: [[5, 5], [19, 7]], speed: 160, mode: 'pingpong', r: 6, phase: 0 },
+    { path: [[18, 5], [4, 7]], speed: 180, mode: 'pingpong', r: 6, phase: 0.5 },
+  ],
+});

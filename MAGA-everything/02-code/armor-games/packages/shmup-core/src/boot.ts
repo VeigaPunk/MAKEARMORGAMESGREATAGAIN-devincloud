@@ -1,5 +1,5 @@
 import { Application } from 'pixi.js';
-import { Input, Sfx, fitIntegerScale, letterboxOffset, viewport } from '@maga/arcade-core';
+import { Input, Sfx, letterboxOffset, viewport } from '@maga/arcade-core';
 import type { ContentPack } from './packs';
 import { DT, STAGE_H, STAGE_W, ShmupSim, type SimEvent } from './sim';
 import { ShmupRenderer } from './render';
@@ -7,7 +7,7 @@ import { ShmupTouch } from './touch';
 
 /**
  * Shared app bootstrap for the shmup skeleton — everything a pack app needs:
- * Pixi Application (webgl, fixed stage), integer letterbox, unified input,
+ * Pixi Application (webgl, fixed stage), proportional letterbox, unified input,
  * touch zones, synth SFX, music bed, 120Hz fixed-step loop, ?debug hook.
  * Apps call `bootShmup(PACKS.x, '<storage-ns>')` and are done.
  */
@@ -59,12 +59,13 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
     preference: 'webgl',
   });
   document.body.appendChild(app.canvas);
+  app.canvas.tabIndex = 0;
 
   const input = new Input();
   const sfx = new Sfx();
   if (muteBtn) {
     const paint = () => { muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON'; };
-    muteBtn.addEventListener('click', () => { sfx.muted = !sfx.muted; paint(); });
+    muteBtn.addEventListener('click', () => { sfx.muted = !sfx.muted; paint(); app.canvas.focus({ preventScroll: true }); });
     paint();
   }
 
@@ -82,6 +83,12 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
   const sim = new ShmupSim(pack, game);
   const renderer = new ShmupRenderer(sim);
   app.stage.addChild(renderer.view, touch.view);
+  app.canvas.addEventListener('contextmenu', e => e.preventDefault());
+  app.canvas.addEventListener('pointerdown', e => { if (e.button === 2) { e.preventDefault(); sim.fireMissile(); } });
+  const pauseOnBlur = () => { if (sim.mode === 'play' || sim.mode === 'clear') sim.paused = true; };
+  window.addEventListener('blur', pauseOnBlur);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseOnBlur(); });
+  document.getElementById('pause')?.addEventListener('click', () => { sim.togglePause(); app.canvas.focus({ preventScroll: true }); });
 
   // keybinds beyond arcade-core defaults (proto: Z fire, X/Shift missile,
   // R/Enter end-screen confirm, 1/2 chapter select)
@@ -97,7 +104,7 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
   // PROOF/debug hook: open with ?debug to expose state for automated acceptance
   if (new URLSearchParams(location.search).has('debug')) {
     (window as unknown as { __maga: unknown }).__maga = {
-      sim, input, touch,
+      sim, input, touch, renderer, app,
       get state() { return sim.snapshot(); },
     };
   }
@@ -105,11 +112,14 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
   function layout(): void {
     const vp = viewport();
     const badgeH = badgeEl?.offsetHeight ?? 0;
-    if (muteBtn) muteBtn.style.top = `${badgeH + 4}px`;
+    if (muteBtn) muteBtn.style.top = '8px';
+    const pauseBtn = document.getElementById('pause');
+    if (pauseBtn) pauseBtn.style.top = '8px';
     const avail = { width: vp.width, height: vp.height - badgeH };
-    const s = fitIntegerScale(STAGE_W, STAGE_H, avail, 4);
+    const s = Math.min(avail.width / STAGE_W, avail.height / STAGE_H, 4);
     const off = letterboxOffset(STAGE_W, STAGE_H, s, avail);
     cachedScale = s;
+    touch.setScale(s);
     const cvs = app.canvas as HTMLCanvasElement;
     cvs.style.width = `${STAGE_W * s}px`;
     cvs.style.height = `${STAGE_H * s}px`;
@@ -131,10 +141,10 @@ export async function bootShmup(pack: ContentPack, game: string): Promise<ShmupH
       if (input.pointer.tapped) sim.titleClick(input.pointer.x, input.pointer.y);
     } else if (sim.mode === 'gameover' || sim.mode === 'win') {
       if (input.wasPressed('fire') || input.wasPressed('action') || input.pointer.tapped) sim.confirmEnd();
-    } else if (sim.mode === 'play') {
-      if (input.wasPressed('pause')) sim.togglePause();
+    } else if (sim.mode === 'play' || sim.mode === 'clear') {
+      if (input.wasPressed('pause') || (sim.paused && input.pointer.tapped)) sim.togglePause();
     }
-    touch.setActive(sim.mode === 'play');
+    touch.setActive(sim.mode === 'play' && !sim.paused);
 
     // ---- combat input ----
     const axis = input.moveAxis(sim.ship.x, sim.ship.y, 40, false); // touch handled by zones (D-15)

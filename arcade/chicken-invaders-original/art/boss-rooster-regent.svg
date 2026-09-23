@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 116" width="124" height="116">
+  <!-- ROOSTER REGENT — boss 2: regal rooster with big comb, sweeping tail plumes, cape chest. -->
+  <g stroke-linejoin="round">
+    <!-- sweeping tail plumes -->
+    <path d="M78,70 Q 116,60 118,24 Q 100,40 92,52 Q 112,38 108,12 Q 92,32 84,48 Q 96,26 84,8 Q 76,34 74,54 Z"
+          fill="#e8590c" stroke="#3a1c05" stroke-width="2"/>
+    <path d="M82,74 Q 108,70 112,46" fill="none" stroke="#ffa94d" stroke-width="3"/>
+    <!-- broad chest / cape -->
+    <ellipse cx="56" cy="74" rx="34" ry="28" fill="#ffe677" stroke="#3a1c05" stroke-width="2.4"/>
+    <path d="M30,66 Q 56,54 82,66 M 28,76 Q 56,64 84,76" stroke="#e8590c" stroke-width="2.2" fill="none"/>
+    <!-- regal shoulder mantle -->
+    <path d="M26,58 Q 56,44 86,58 L 82,66 Q 56,54 30,66 Z" fill="#ffc92a" stroke="#3a1c05" stroke-width="1.8"/>
+    <!-- head -->
+    <circle cx="48" cy="34" r="16" fill="#ffe677" stroke="#3a1c05" stroke-width="2.2"/>
+    <!-- big comb -->
+    <path d="M36,24 Q 32,8 42,12 Q 42,2 50,8 Q 52,-2 58,8 Q 64,4 62,16 Q 60,22 56,22 Z"
+          fill="#e8590c" stroke="#3a1c05" stroke-width="1.8"/>
+    <!-- beak -->
+    <polygon points="40,34 56,32 46,48" fill="#e8590c" stroke="#3a1c05" stroke-width="1.6"/>
+    <!-- wattles -->
+    <ellipse cx="42" cy="48" rx="4" ry="6" fill="#e8590c" stroke="#3a1c05" stroke-width="1.2"/>
+    <!-- fierce eyes -->
+    <circle cx="42" cy="30" r="2.6" fill="#111"/>
+    <circle cx="54" cy="29" r="2.6" fill="#111"/>
+    <path d="M38,26 L 46,27 M 50,26 L 58,25" stroke="#3a1c05" stroke-width="1.8"/>
+    <!-- tail plume accents -->
+    <circle cx="104" cy="26" r="4" fill="#ffd43b" stroke="#3a1c05" stroke-width="1.2"/>
+    <circle cx="98" cy="14" r="3.4" fill="#ffd43b" stroke="#3a1c05" stroke-width="1.2"/>
+  </g>
+</svg>

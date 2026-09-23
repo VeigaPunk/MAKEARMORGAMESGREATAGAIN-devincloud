@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 110" width="120" height="110">
+  <!-- MOTHER GOOSE — boss 1: matriarch goose, long elegant neck, layered wings, golden collar. -->
+  <g stroke-linejoin="round">
+    <!-- spread layered wings -->
+    <path d="M22,58 Q 4,44 10,26 Q 26,36 36,50 Z" fill="#e8590c" stroke="#3a1c05" stroke-width="2"/>
+    <path d="M98,58 Q 116,44 110,26 Q 94,36 84,50 Z" fill="#e8590c" stroke="#3a1c05" stroke-width="2"/>
+    <path d="M26,60 Q 12,52 16,40 Q 28,48 36,56 Z" fill="#ffa94d" stroke="#3a1c05" stroke-width="1.6"/>
+    <path d="M94,60 Q 108,52 104,40 Q 92,48 84,56 Z" fill="#ffa94d" stroke="#3a1c05" stroke-width="1.6"/>
+    <!-- plump body -->
+    <ellipse cx="60" cy="72" rx="32" ry="26" fill="#ffa94d" stroke="#3a1c05" stroke-width="2.4"/>
+    <!-- belly -->
+    <ellipse cx="60" cy="80" rx="20" ry="14" fill="#ffe066" stroke="#3a1c05" stroke-width="1.6"/>
+    <!-- tail feathers -->
+    <polygon points="60,96 48,108 56,100 60,106 64,100 72,108" fill="#ffe066" stroke="#3a1c05" stroke-width="1.4"/>
+    <!-- long elegant neck -->
+    <path d="M52,56 Q 44,32 52,18 L 66,18 Q 60,34 66,54 Z" fill="#ffe066" stroke="#3a1c05" stroke-width="2"/>
+    <!-- head -->
+    <circle cx="60" cy="14" r="12" fill="#ffe066" stroke="#3a1c05" stroke-width="2"/>
+    <!-- golden collar -->
+    <path d="M50,32 Q 60,38 68,32" stroke="#ffd43b" stroke-width="4" fill="none"/>
+    <!-- crown: three nubs -->
+    <path d="M50,6 L 53,0 L 57,5 L 60,-2 L 63,5 L 67,0 L 70,6" fill="#ffd43b" stroke="#3a1c05" stroke-width="1.4"/>
+    <!-- orange beak -->
+    <polygon points="52,12 68,12 60,26" fill="#e8590c" stroke="#3a1c05" stroke-width="1.6"/>
+    <!-- stern eyes -->
+    <circle cx="54" cy="10" r="2.2" fill="#111"/>
+    <circle cx="66" cy="10" r="2.2" fill="#111"/>
+  </g>
+</svg>

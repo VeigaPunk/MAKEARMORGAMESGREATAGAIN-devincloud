@@ -4,7 +4,7 @@
  * with a predictive dot-collision horizon. No DOM. Node + browser.
  *
  * A CLEAR is hard evidence the level is beatable (the inputs are legal and the
- * engine accepted them). A FAIL means the greedy policy couldn't clear within
+ * engine accepted them, held for complete 60Hz input frames). A FAIL means the greedy policy couldn't clear within
  * budget — the level may still be humanly possible, but it is NOT verified.
  */
 (function (root) {
@@ -13,6 +13,7 @@ const HORIZON = 0.8;           // candidate sim lookahead cap (s); a move is
 const E = root.HardestEngine;
 
 const CHECK_EVERY = 4;         // dot check every Nth substep (~16.7ms)
+const INPUT_STEPS = 4;         // hold each input for one 60Hz frame (4 physics ticks)
 const REACH = 7;               // waypoint reach radius (px)
 const STUCK_T = 1.2;           // s without progress → wiggle
 const WIGGLE_T = 0.5;
@@ -142,7 +143,12 @@ function solve(level, opts) {
 
   while (st.t < tEnd && st.deaths < maxDeaths) {
     if (st.status === 'clear') return { clear: true, time: st.time, deaths: st.deaths, simT: st.t, reason: 'clear' };
-    if (st.status === 'dead') { E.step(st, { x: 0, y: 0 }, E.STEP); wps = plan(); wi = 0; bestD = Infinity; continue; }
+    if (st.status === 'dead') {
+      const input = { x: 0, y: 0 };
+      if (opts.onInput) opts.onInput(input, INPUT_STEPS);
+      for (let tick = 0; tick < INPUT_STEPS; tick++) E.step(st, input, E.STEP);
+      wps = plan(); wi = 0; bestD = Infinity; continue;
+    }
 
     if (!wps) return { clear: false, time: st.time, deaths: st.deaths, simT: st.t, reason: 'no-path' };
     if (wi >= wps.length) { wps = plan(); wi = 0; if (!wps) return { clear: false, time: st.time, deaths: st.deaths, simT: st.t, reason: 'no-path' }; }
@@ -157,7 +163,7 @@ function solve(level, opts) {
     let chosen = null;
     if (stuck && wiggle <= 0) wiggle = WIGGLE_T;
     if (wiggle > 0) {
-      wiggle -= E.STEP;
+      wiggle -= E.STEP * INPUT_STEPS;
       const safe = DIRS.map(d => ({ d, r: evalMove(px, py, d, st.t, wp) })).filter(o => o.r.safe && (o.d[0] || o.d[1]));
       chosen = safe.length ? safe[Math.floor(rng() * safe.length)].d : [0, 0];
       if (wiggle <= 0) { wps = plan(); wi = 0; bestD = Infinity; lastImprove = st.t; }
@@ -173,9 +179,13 @@ function solve(level, opts) {
       chosen = bestSafe ? bestSafe.d : (bestAny ? bestAny.d : [0, 0]);
     }
 
-    E.step(st, { x: chosen[0], y: chosen[1] }, E.STEP);
+    // Shipping input is sampled once per animation frame, never per physics tick.
+    // Recordable 60Hz holds make proof runs reproducible through the real engine.
+    const input = { x: chosen[0], y: chosen[1] };
+    if (opts.onInput) opts.onInput(input, INPUT_STEPS);
+    for (let tick = 0; tick < INPUT_STEPS; tick++) E.step(st, input, E.STEP);
     if (st.teleports > tpCount) { tpCount = st.teleports; wps = plan(); wi = 0; bestD = Infinity; lastImprove = st.t; }
-    if (opts.trace && (st.t * 240 | 0) % 240 === 0) opts.trace(st, wp, chosen);
+    if (opts.trace) opts.trace(st, wp, chosen);
   }
   return {
     clear: false, time: st.time, deaths: st.deaths, simT: st.t,

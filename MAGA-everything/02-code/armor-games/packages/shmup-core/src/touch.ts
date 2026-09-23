@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 
 /**
  * Shmup touch controls — spec layouts A (twin thumbs) + B (one-thumb)
@@ -33,7 +33,10 @@ export class ShmupTouch {
   private dragOrigin = { x: 0, y: 0 };
   private firePointer = -1;
   private missilePointer = -1;
-  private baseAlpha = 0.42;
+  private baseAlpha = 0.65;
+  private displayScale = 1;
+  private fireLabel = new Text({text:'FIRE',style:{fill:0xffefc0,fontFamily:'monospace',fontSize:12,fontWeight:'bold'}});
+  private missileLabel = new Text({text:'M',style:{fill:0xffefc0,fontFamily:'monospace',fontSize:12,fontWeight:'bold'}});
 
   private padBase!: Graphics;
   private padKnob!: Graphics;
@@ -55,7 +58,8 @@ export class ShmupTouch {
     };
 
     canvas.addEventListener('pointerdown', (e) => {
-      if (!this.active) return; // menus: leave taps to Input
+      if (!this.active || e.pointerType !== 'touch') return; // mouse belongs to aim/fire
+      this.coarse = true;
       const p = toLocal(e);
       if (this.inFireZone(p) && this.firePointer < 0) {
         this.firePointer = e.pointerId; this.fire = true;
@@ -68,6 +72,7 @@ export class ShmupTouch {
         this.coarse = true;
         e.stopImmediatePropagation(); e.preventDefault();
       }
+      try { canvas.setPointerCapture(e.pointerId); } catch {}
       this.applyVisibility();
     }, { capture: true });
 
@@ -88,13 +93,21 @@ export class ShmupTouch {
     };
     window.addEventListener('pointerup', release, { capture: true });
     window.addEventListener('pointercancel', release, { capture: true });
+    canvas.addEventListener('lostpointercapture', release);
+    window.addEventListener('blur', () => this.reset());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.reset(); });
   }
 
   /** gameplay gate — menus/end screens leave every touch to Input (D-14) */
   setActive(v: boolean): void {
     this.active = v;
-    if (!v) { this.drag = null; this.fire = false; this.dragPointer = -1; this.firePointer = -1; this.missilePointer = -1; }
+    if (!v) this.reset();
     this.applyVisibility();
+  }
+
+  private reset(): void {
+    this.drag = null; this.fire = false; this.dragPointer = -1;
+    this.firePointer = -1; this.missilePointer = -1; this.missileQueued = false;
   }
 
   /** one-shot missile press */
@@ -102,19 +115,23 @@ export class ShmupTouch {
     const q = this.missileQueued; this.missileQueued = false; return q;
   }
 
+  setScale(scale: number): void { this.displayScale = Math.min(1, Math.max(0.2, scale)); this.redraw(); }
+  private fireRadius() { return Math.max(FIRE_R, 22 / this.displayScale); }
+  private missileRadius() { return Math.max(MISSILE_R, 22 / this.displayScale); }
+
   private fireHome() { return { x: this.stageW - 66, y: this.stageH - 70 }; }
-  private missileHome() { return { x: this.stageW - 150, y: this.stageH - 52 }; }
+  private missileHome() { return { x: this.stageW - 66 - Math.max(84, this.fireRadius() + this.missileRadius() + 16), y: this.stageH - 70 }; }
 
   private inDragZone(p: { x: number; y: number }): boolean {
     return p.x < this.stageW * 0.55 && p.y > this.stageH * 0.35;
   }
   private inFireZone(p: { x: number; y: number }): boolean {
     const h = this.fireHome();
-    return Math.hypot(p.x - h.x, p.y - h.y) <= FIRE_R + 14;
+    return Math.hypot(p.x - h.x, p.y - h.y) <= this.fireRadius() + 8;
   }
   private inMissileZone(p: { x: number; y: number }): boolean {
     const h = this.missileHome();
-    return Math.hypot(p.x - h.x, p.y - h.y) <= MISSILE_R + 14;
+    return Math.hypot(p.x - h.x, p.y - h.y) <= this.missileRadius() + 8;
   }
 
   private build(): void {
@@ -122,7 +139,8 @@ export class ShmupTouch {
     this.padKnob = new Graphics();
     this.fireBtn = new Graphics();
     this.missileBtn = new Graphics();
-    this.view.addChild(this.padBase, this.padKnob, this.fireBtn, this.missileBtn);
+    this.fireLabel.anchor.set(0.5); this.missileLabel.anchor.set(0.5);
+    this.view.addChild(this.padBase, this.padKnob, this.fireBtn, this.missileBtn, this.fireLabel, this.missileLabel);
     this.view.visible = false;
     this.view.eventMode = 'none'; // pure display; canvas-level zones own hit tests
     this.redraw();
@@ -141,12 +159,14 @@ export class ShmupTouch {
 
     const f = this.fireHome();
     this.fireBtn.clear()
-      .circle(f.x, f.y, FIRE_R)
+      .circle(f.x, f.y, this.fireRadius())
       .fill({ color: this.fire ? 0xd43a3a : 0x8a2430, alpha: 0.85 })
       .stroke({ width: 2, color: 0xf5c542, alpha: 0.9 });
+    this.fireLabel.x=f.x; this.fireLabel.y=f.y; this.fireLabel.style.fontSize=12/this.displayScale;
     const m = this.missileHome();
+    this.missileLabel.x=m.x; this.missileLabel.y=m.y; this.missileLabel.style.fontSize=12/this.displayScale;
     this.missileBtn.clear()
-      .circle(m.x, m.y, MISSILE_R)
+      .circle(m.x, m.y, this.missileRadius())
       .fill({ color: this.missilePointer >= 0 ? 0xd4a53a : 0x6a5a20, alpha: 0.85 })
       .stroke({ width: 2, color: 0xf5c542, alpha: 0.9 });
   }

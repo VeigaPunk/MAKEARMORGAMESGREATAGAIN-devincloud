@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 108" width="460" height="108">
+  <!-- BOXHEAD wordmark — direct-authored chunky block letterforms (grid-built,
+       INTERNAL-NO-PUBLIC, no original-game logo artwork). Palette matches the
+       in-game gold header (0xf5c542) on dark stage (0x0a0a0f). -->
+  <defs>
+    <style>
+      .blk { fill: #f5c542; stroke: #6b4e10; stroke-width: 0.6; }
+      .shd { fill: #3a2c08; }
+    </style>
+  </defs>
+  <rect x="2" y="2" width="456" height="104" rx="6" fill="#0a0a0f" stroke="#2a2a3a" stroke-width="2"/>
+  <!-- offset shadow pass, shifted +1.5/+1.5 -->
+  <g class="shd" transform="translate(21.5,29.5)">
+    <g id="sh-B"><rect x="0" y="0" width="48" height="12"/><rect x="0" y="0" width="12" height="48"/><rect x="0" y="24" width="48" height="12"/><rect x="0" y="48" width="48" height="12"/><rect x="36" y="12" width="12" height="12"/><rect x="36" y="36" width="12" height="12"/></g>
+    <g id="sh-O" transform="translate(60,0)"><rect x="12" y="0" width="36" height="12"/><rect x="12" y="48" width="36" height="12"/><rect x="0" y="12" width="12" height="36"/><rect x="48" y="12" width="12" height="36"/></g>
+    <g id="sh-X" transform="translate(120,0)"><rect x="0" y="0" width="12" height="12"/><rect x="48" y="0" width="12" height="12"/><rect x="12" y="12" width="12" height="12"/><rect x="36" y="12" width="12" height="12"/><rect x="24" y="24" width="12" height="12"/><rect x="12" y="36" width="12" height="12"/><rect x="36" y="36" width="12" height="12"/><rect x="0" y="48" width="12" height="12"/><rect x="48" y="48" width="12" height="12"/></g>
+    <g id="sh-H" transform="translate(180,0)"><rect x="0" y="0" width="12" height="60"/><rect x="48" y="0" width="12" height="60"/><rect x="12" y="24" width="36" height="12"/></g>
+    <g id="sh-E" transform="translate(240,0)"><rect x="0" y="0" width="60" height="12"/><rect x="0" y="0" width="12" height="60"/><rect x="0" y="24" width="48" height="12"/><rect x="0" y="48" width="60" height="12"/></g>
+    <g id="sh-A" transform="translate(312,0)"><rect x="12" y="0" width="36" height="12"/><rect x="0" y="12" width="12" height="48"/><rect x="48" y="12" width="12" height="48"/><rect x="12" y="24" width="36" height="12"/></g>
+    <g id="sh-D" transform="translate(372,0)"><rect x="0" y="0" width="48" height="12"/><rect x="0" y="48" width="48" height="12"/><rect x="0" y="12" width="12" height="36"/><rect x="48" y="12" width="12" height="36"/></g>
+  </g>
+  <!-- main letter pass: 5x7-ish chunky grid, unit 12, letter pitch 60 -->
+  <g class="blk" transform="translate(20,28)">
+    <g><rect x="0" y="0" width="48" height="12"/><rect x="0" y="0" width="12" height="48"/><rect x="0" y="24" width="48" height="12"/><rect x="0" y="48" width="48" height="12"/><rect x="36" y="12" width="12" height="12"/><rect x="36" y="36" width="12" height="12"/></g>
+    <g transform="translate(60,0)"><rect x="12" y="0" width="36" height="12"/><rect x="12" y="48" width="36" height="12"/><rect x="0" y="12" width="12" height="36"/><rect x="48" y="12" width="12" height="36"/></g>
+    <g transform="translate(120,0)"><rect x="0" y="0" width="12" height="12"/><rect x="48" y="0" width="12" height="12"/><rect x="12" y="12" width="12" height="12"/><rect x="36" y="12" width="12" height="12"/><rect x="24" y="24" width="12" height="12"/><rect x="12" y="36" width="12" height="12"/><rect x="36" y="36" width="12" height="12"/><rect x="0" y="48" width="12" height="12"/><rect x="48" y="48" width="12" height="12"/></g>
+    <g transform="translate(180,0)"><rect x="0" y="0" width="12" height="60"/><rect x="48" y="0" width="12" height="60"/><rect x="12" y="24" width="36" height="12"/></g>
+    <g transform="translate(240,0)"><rect x="0" y="0" width="60" height="12"/><rect x="0" y="0" width="12" height="60"/><rect x="0" y="24" width="48" height="12"/><rect x="0" y="48" width="60" height="12"/></g>
+    <g transform="translate(312,0)"><rect x="12" y="0" width="36" height="12"/><rect x="0" y="12" width="12" height="48"/><rect x="48" y="12" width="12" height="48"/><rect x="12" y="24" width="36" height="12"/></g>
+    <g transform="translate(372,0)"><rect x="0" y="0" width="48" height="12"/><rect x="0" y="48" width="48" height="12"/><rect x="0" y="12" width="12" height="36"/><rect x="48" y="12" width="12" height="36"/></g>
+  </g>
+  <!-- box-head accent: small square head with eyes, nodding to the boxy hero -->
+  <g transform="translate(416,34)">
+    <rect x="0" y="0" width="28" height="28" class="blk"/>
+    <rect x="6" y="9" width="5" height="10" fill="#0a0a0f"/>
+    <rect x="17" y="9" width="5" height="10" fill="#0a0a0f"/>
+    <rect x="4" y="30" width="20" height="6" class="blk"/>
+  </g>
+</svg>

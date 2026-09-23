@@ -1,11 +1,11 @@
 import { Application } from 'pixi.js';
-import { Input, Sfx, fitIntegerScale, letterboxOffset, viewport } from '@maga/arcade-core';
+import { Input, Sfx, letterboxOffset, viewport } from '@maga/arcade-core';
 import { Game } from './game';
 import { TouchControls } from './touch';
 
 /**
  * Boxhead native replica — bootstrap.
- * Fixed logical stage, integer letterboxed scaling, unified input, synth SFX.
+ * Fixed logical stage, proportional letterboxed scaling, unified input, synth SFX.
  */
 
 const STAGE_W = 640;
@@ -25,6 +25,7 @@ await app.init({
   preference: 'webgl',
 });
 document.body.appendChild(app.canvas);
+app.canvas.tabIndex = 0;
 
 const input = new Input();
 const sfx = new Sfx();
@@ -33,7 +34,7 @@ const sfx = new Sfx();
 const muteBtn = document.getElementById('mute');
 if (muteBtn) {
   const paint = () => { muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON'; };
-  muteBtn.addEventListener('click', () => { sfx.muted = !sfx.muted; paint(); });
+  muteBtn.addEventListener('click', () => { sfx.muted = !sfx.muted; paint(); app.canvas.focus({ preventScroll: true }); });
   paint();
 }
 
@@ -53,6 +54,9 @@ const touch = new TouchControls(STAGE_W, STAGE_H, app.canvas, toLogical);
 input.attach(app.canvas, toLogical);
 
 const game = new Game(app, input, sfx, touch);
+document.getElementById('pause')?.addEventListener('click', () => { game.togglePause(); app.canvas.focus({ preventScroll: true }); });
+window.addEventListener('blur', () => game.pauseForFocus());
+document.addEventListener('visibilitychange', () => { if (document.hidden) game.pauseForFocus(); });
 
 
 // PROOF/debug hook: open with ?debug to expose state for automated acceptance
@@ -63,11 +67,14 @@ if (new URLSearchParams(location.search).has('debug')) {
 function layout(): void {
   const vp = viewport();
   const badgeH = badgeEl?.offsetHeight ?? 0;
-  if (muteBtn) muteBtn.style.top = `${badgeH + 4}px`;
+  if (muteBtn) muteBtn.style.top = '8px';
+  const pauseBtn = document.getElementById('pause');
+  if (pauseBtn) pauseBtn.style.top = '8px';
   const avail = { width: vp.width, height: vp.height - badgeH };
-  const s = fitIntegerScale(STAGE_W, STAGE_H, avail, 4);
+  const s = Math.min(avail.width / STAGE_W, avail.height / STAGE_H, 4);
   const off = letterboxOffset(STAGE_W, STAGE_H, s, avail);
   cachedScale = s;
+  touch.setScale(s);
   const cvs = app.canvas as HTMLCanvasElement;
   cvs.style.width = `${STAGE_W * s}px`;
   cvs.style.height = `${STAGE_H * s}px`;

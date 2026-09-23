@@ -7,7 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "node --test tests/release.test.mjs"
   },
   "dependencies": {
     "@maga/arcade-core": "*",

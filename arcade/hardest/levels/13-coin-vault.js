@@ -1,0 +1,31 @@
+/* Level 13 — Coin Vault. Teaches: enter a crossfire chamber, loot six coins, retreat through a checkpoint. */
+(globalThis.HARDEST_LEVELS = globalThis.HARDEST_LEVELS || []).push({
+  id: 13,
+  name: 'Coin Vault',
+  map: [
+    '########################',
+    '#SS...................G#',
+    '#......................#',
+    '#......................#',
+    '#......................#',
+    '#........C.C.C.........#',
+    '#......................#',
+    '#........C.C.C.........#',
+    '#......................#',
+    '#..........K...........#',
+    '#......................#',
+    '#......................#',
+    '#......................#',
+    '#......................#',
+    '########################',
+  ],
+  patrols: [
+    { path: [[4, 5], [19, 5]], speed: 110, mode: 'pingpong', phase: 0 },
+    { path: [[19, 7], [4, 7]], speed: 120, mode: 'pingpong', phase: 0.5 },
+    { path: [[8, 2], [8, 12]], speed: 130, mode: 'pingpong', phase: 0.25 },
+    { path: [[15, 12], [15, 2]], speed: 140, mode: 'pingpong', phase: 0.75 },
+    { path: [[3, 3], [20, 10]], speed: 150, mode: 'pingpong', phase: 0 },
+    { path: [[20, 3], [3, 10]], speed: 160, mode: 'pingpong', phase: 0.5 },
+    { path: [[5, 11], [18, 11]], speed: 170, mode: 'pingpong', phase: 0.25 },
+  ],
+});

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 44" width="36" height="44">
+  <!-- COURIER SHIP — teal courier craft: hull + wings + cockpit + engine pods. -->
+  <g stroke-linejoin="round">
+    <!-- wings -->
+    <polygon points="6,20 2,34 12,30" fill="#0ca678" stroke="#04241c" stroke-width="1.5"/>
+    <polygon points="30,20 34,34 24,30" fill="#0ca678" stroke="#04241c" stroke-width="1.5"/>
+    <!-- wing accent tips -->
+    <polygon points="3,31 6,26 8,29" fill="#ffa94d"/>
+    <polygon points="33,31 30,26 28,29" fill="#ffa94d"/>
+    <!-- hull -->
+    <polygon points="18,2 8,24 12,36 24,36 28,24" fill="#20c997" stroke="#04241c" stroke-width="1.8"/>
+    <!-- cockpit -->
+    <polygon points="18,8 13,20 23,20" fill="#b3ffe3" stroke="#04241c" stroke-width="1.2"/>
+    <!-- engine pods -->
+    <rect x="10" y="36" width="5" height="6" fill="#0ca678" stroke="#04241c" stroke-width="1.2"/>
+    <rect x="21" y="36" width="5" height="6" fill="#0ca678" stroke="#04241c" stroke-width="1.2"/>
+    <!-- flames -->
+    <polygon points="11.5,42 12.5,42 12,48" fill="#ffd43b"/>
+    <polygon points="22.5,42 23.5,42 23,48" fill="#ffd43b"/>
+  </g>
+</svg>

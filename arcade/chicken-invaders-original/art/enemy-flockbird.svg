@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 44" width="48" height="44">
+  <!-- FLOCKBIRD — small darting bird: slim swept body, swept-back wings, sharp beak. -->
+  <g stroke-linejoin="round">
+    <!-- wings -->
+    <polygon points="6,22 20,16 22,22" fill="#e8590c" stroke="#3a1c05" stroke-width="1.5"/>
+    <polygon points="42,22 28,16 26,22" fill="#e8590c" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- tail -->
+    <polygon points="24,34 19,42 24,39 29,42" fill="#e8590c" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- body: slim vertical dart -->
+    <ellipse cx="24" cy="24" rx="9" ry="13" fill="#ffa94d" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- head -->
+    <circle cx="24" cy="11" r="6" fill="#ffe066" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- beak: long sharp point (darting) -->
+    <polygon points="21,9 27,9 24,0" fill="#ffd43b" stroke="#3a1c05" stroke-width="1.2"/>
+    <!-- eyes -->
+    <circle cx="21.5" cy="10.5" r="1.6" fill="#111"/>
+    <circle cx="26.5" cy="10.5" r="1.6" fill="#111"/>
+    <!-- chest streak -->
+    <polygon points="24,18 21,28 27,28" fill="#ffe066" opacity="0.85"/>
+  </g>
+</svg>

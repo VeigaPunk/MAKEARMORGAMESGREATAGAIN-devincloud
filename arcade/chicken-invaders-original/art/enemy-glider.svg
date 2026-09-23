@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 40" width="72" height="40">
+  <!-- FLOCKBIRD GLIDER — wide flat glider: broad crescent wings, low body. -->
+  <g stroke-linejoin="round">
+    <!-- wide crescent wings, tips swept up -->
+    <path d="M4,26 Q 2,12 18,10 L 34,14 L 34,26 Q 20,30 4,26 Z" fill="#ffe066" stroke="#3a1c05" stroke-width="1.5"/>
+    <path d="M68,26 Q 70,12 54,10 L 38,14 L 38,26 Q 52,30 68,26 Z" fill="#ffe066" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- wing feather notches -->
+    <path d="M10,24 L 14,15 M 18,26 L 22,14" stroke="#e8590c" stroke-width="1.6" fill="none"/>
+    <path d="M62,24 L 58,15 M 54,26 L 50,14" stroke="#e8590c" stroke-width="1.6" fill="none"/>
+    <!-- low flat body -->
+    <ellipse cx="36" cy="24" rx="12" ry="8" fill="#ffa94d" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- head -->
+    <circle cx="36" cy="13" r="6" fill="#ffe066" stroke="#3a1c05" stroke-width="1.5"/>
+    <!-- short wedge beak -->
+    <polygon points="33,11 39,11 36,3" fill="#ffd43b" stroke="#3a1c05" stroke-width="1.2"/>
+    <circle cx="33.5" cy="12.5" r="1.6" fill="#111"/>
+    <circle cx="38.5" cy="12.5" r="1.6" fill="#111"/>
+    <!-- belly stripe -->
+    <path d="M28,27 Q 36,31 44,27" stroke="#e8590c" stroke-width="2" fill="none"/>
+  </g>
+</svg>

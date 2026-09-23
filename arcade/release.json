@@ -1,0 +1,13 @@
+{
+  "version": "1.1.0",
+  "distribution": "private",
+  "games": [
+    "boxhead",
+    "impossible",
+    "burger-tycoon",
+    "chicken-invaders",
+    "chicken-invaders-original",
+    "swords-and-sandals",
+    "hardest"
+  ]
+}

@@ -4,7 +4,7 @@ import {
   AmmoCrate, Barrel, BlastRing, Player, Projectile, Zombie,
   clamp, dist, type Vec,
 } from './entities';
-import { ROOMS, WAVE_TABLES, ScoreSystem, ammoPerShot, fireDelay, type ArenaRoom } from './world';
+import { ROOMS, waveFor, ScoreSystem, ammoPerShot, fireDelay, type ArenaRoom } from './world';
 import { TouchControls } from './touch';
 
 /**
@@ -16,7 +16,6 @@ import { TouchControls } from './touch';
 
 const STAGE_W = 640;
 const STAGE_H = 400; // provisional, UNVERIFIED until ARCADE measures the original
-const MAX_WAVE = 3;
 const CRATE_AMMO = 16;
 const BARREL_RADIUS = 55;
 const BARREL_PLAYER_DAMAGE = 25;
@@ -70,6 +69,8 @@ export class Game {
   private hudText!: Text;
   private banner!: Text;
   private menuChip = new Container();
+  private overlay = new Graphics();
+  private hudPlate = new Graphics();
   /** direct-authored art (public/art/*.svg); menus/arena work without them,
    *  these decorate once the async load resolves. */
   private logoTex: Texture | null = null;
@@ -96,7 +97,9 @@ export class Game {
     this.hudText = new Text({ text: '', style: { fill: 0xf5c542, fontSize: 12, fontFamily: 'monospace', lineHeight: 16 } });
     this.hudText.x = 14;
     this.hudText.y = 10;
-    this.hud.addChild(this.hudText);
+    this.hudPlate.rect(10, 10, 620, 44).fill({ color: 0x080e12, alpha: 0.86 }).stroke({color: 0x515947, width: 1});
+    this.hudText.x = 18; this.hudText.y = 15;
+    this.hud.addChild(this.hudPlate, this.hudText, this.overlay);
 
     this.banner = new Text({
       text: '',
@@ -120,16 +123,29 @@ export class Game {
     this.menuChip.visible = false;
     this.hud.addChild(this.menuChip);
     // authored art preload — decorative only; failures leave procedural look.
-    Assets.load<Texture>('/art/boxhead-logo.svg')
+    Assets.load<Texture>('./art/boxhead-logo.svg')
       .then((t) => { this.logoTex = t; if (this.state === 'title') this.showTitle(); })
       .catch(() => { /* keep text-only title */ });
-    Assets.load<Texture>('/art/floor-tile.svg')
+    Assets.load<Texture>('./art/floor-tile.svg')
       .then((t) => { this.floorTex = t; })
       .catch(() => { /* keep flat arena fill */ });
     this.showTitle();
   }
 
   get player(): Player { return this.slots[0].p; }
+
+  togglePause(): void {
+    if (this.state === 'paused') {
+      this.state = 'playing'; this.banner.text = '';
+      this.sfx.startMusic([110,0,110,0,131,0,98,0],160);
+    } else this.pauseForFocus();
+  }
+
+  pauseForFocus(): void {
+    if (this.state !== 'playing') return;
+    this.state = 'paused'; this.sfx.stopMusic();
+    this.banner.text = 'PAUSED\nESC / P / SPACE / tap — resume\nM — menu';
+  }
 
   // --- menus -----------------------------------------------------------------
   private clearMenu(): void {
@@ -160,6 +176,7 @@ export class Game {
     this.clearMenu();
     this.world.visible = false;
     this.hud.visible = false;
+    this.banner.text = '';
     if (this.logoTex) {
       const logo = new Sprite(this.logoTex);
       logo.anchor.set(0.5);
@@ -169,39 +186,39 @@ export class Game {
       this.menu.addChild(logo);
     }
     this.menuText([
-      'BOXHEAD — 2PLAY ROOMS (native replica)',
-      'INTERNAL-NO-PUBLIC build · localhost only',
-      '',
-      'PRESS SPACE / ENTER / TAP TO CONTINUE',
-    ], 150);
+      'BOXHEAD · 2PLAY ROOMS',
+      'ENDLESS WAVES. ONE MORE RUN.',
+    ], 156);
+    this.menuButton('ENTER THE ARENA', 'SPACE / ENTER / TAP', 255);
+    this.menuText([`PERSONAL BEST  ${this.high.toString().padStart(6, '0')}`], 352);
+  }
+
+  private menuButton(label: string, detail: string, y: number): void {
+    const bg = new Graphics().rect(58,y-22,524,46).fill(0x1a2225).stroke({color:0x657055,width:1});
+    bg.rect(58,y-22,5,46).fill(0xc4f04d);
+    const a = new Text({text:label,style:{fontFamily:'monospace',fontSize:17,fontWeight:'bold',fill:0xecf1e0}});
+    a.x=76; a.y=y-15;
+    const b = new Text({text:detail,style:{fontFamily:'monospace',fontSize:10,fill:0xa3b0ab}});
+    b.x=76; b.y=y+6;
+    this.menu.addChild(bg,a,b);
   }
 
   private showModeSelect(): void {
-    this.state = 'mode';
-    // D-18: end-of-run banner + stale HUD must not bleed onto menus
-    this.banner.text = '';
-    this.hud.visible = false;
+    this.state = 'mode'; this.sfx.stopMusic(); this.world.visible = false;
+    this.banner.text = ''; this.hud.visible = false;
     this.clearMenu();
-    this.menuText([
-      'SELECT MODE',
-      '1 — SOLO SURVIVAL (WASD or arrows + Space/J)',
-      '2 — LOCAL CO-OP (P1 WASD+Space · P2 arrows+IJKL/numpad)',
-      '3 — LOCAL DEATHMATCH (first to 5 kills — rule TBD ARCADE)',
-      '',
-      'Press 1 / 2 / 3 (or tap to pick Solo)',
-    ], 96);
+    this.menuText(['SELECT MODE'], 90);
+    this.menuButton('1  SOLO SURVIVAL', 'ENDLESS · WASD / ARROWS · SPACE FIRE · MOUSE AIM', 160);
+    this.menuButton('2  LOCAL CO-OP', 'ENDLESS · P1 WASD + SPACE · P2 ARROWS + IJKL / NUMPAD', 220);
+    this.menuButton('3  LOCAL DEATHMATCH', 'FIRST TO 5 · AMMO CRATES · 2 PLAYERS, ONE KEYBOARD', 280);
   }
 
   private showRoomSelect(): void {
-    this.state = 'room';
+    this.state = 'room'; this.world.visible = false; this.hud.visible = false;
     this.clearMenu();
-    this.menuText([
-      'SELECT ROOM',
-      `1 — ${ROOMS[0].name}`,
-      `2 — ${ROOMS[1].name}`,
-      '',
-      'Press 1 / 2 (or tap to pick room 1)',
-    ], 120);
+    this.menuText(['SELECT ROOM'], 90);
+    this.menuButton(`1  ${ROOMS[0].name}`, 'WIDE FIRING LANES · TWO COVER BLOCKS', 170);
+    this.menuButton(`2  ${ROOMS[1].name}`, 'FOUR PILLARS · CLOSE-QUARTER CHAOS', 240);
   }
 
   // --- run lifecycle ------------------------------------------------------------
@@ -215,20 +232,28 @@ export class Game {
     // room geometry
     this.world.removeChildren().forEach((c) => c.destroy());
     const arena = new Graphics();
-    arena.rect(10, 10, STAGE_W - 20, STAGE_H - 20).fill(0x101018).stroke({ width: 2, color: 0x2a2a3a });
-    for (const o of this.room.obstacles) {
-      arena.rect(o.x, o.y, o.w, o.h).fill(0x2c2c3c).stroke({ width: 1, color: 0x44445c });
-    }
+    arena.rect(10,10,620,380).fill(0x1b2325).stroke({width:3,color:0x586454});
     this.world.addChild(arena);
     if (this.floorTex) {
-      // authored floor tile over the flat fill — same base color (0x101018),
-      // so this only adds the subtle grid/grime layer; entities draw above.
-      const floor = new TilingSprite({ texture: this.floorTex, width: STAGE_W - 20, height: STAGE_H - 20 });
-      floor.x = 10;
-      floor.y = 10;
-      floor.alpha = 0.85;
-      this.world.addChild(floor);
+      const floor = new TilingSprite({texture:this.floorTex,width:616,height:376});
+      floor.x=12; floor.y=12; floor.alpha=0.5; this.world.addChild(floor);
     }
+    const detail = new Graphics();
+    for(let x=18;x<625;x+=32) detail.moveTo(x,12).lineTo(x,388).stroke({color:0x657365,alpha:0.12,width:1});
+    for(let y=18;y<388;y+=32) detail.moveTo(12,y).lineTo(628,y).stroke({color:0x657365,alpha:0.12,width:1});
+    for(let i=0;i<26;i++) {
+      const x=28+(i*173)%570,y=65+(i*97)%298;
+      detail.rect(x,y,3+i%7,1).fill({color:0xa3ac90,alpha:0.15});
+    }
+    for (const x of [14,610]) for(let y=70;y<370;y+=22) detail.poly([x,y,x+14,y+9,x+14,y+17,x,y+8]).fill({color:0xd1af42,alpha:0.25});
+    for (const o of this.room.obstacles) {
+      detail.rect(o.x+5,o.y+6,o.w,o.h).fill({color:0x000000,alpha:0.45});
+      detail.rect(o.x,o.y,o.w,o.h).fill(0x495456).stroke({width:2,color:0x141d20});
+      detail.rect(o.x+2,o.y+2,o.w-4,5).fill(0x738077);
+      detail.rect(o.x+2,o.y+o.h-6,o.w-4,4).fill(0x2e383c);
+      for(const dx of [5,o.w-7]) for(const dy of [9,o.h-10]) detail.rect(o.x+dx,o.y+dy,2,2).fill(0xadb99d);
+    }
+    this.world.addChild(detail);
 
     const twoPlayer = this.mode !== 'solo';
     this.input.setMode(twoPlayer ? 'versus' : 'solo');
@@ -253,6 +278,7 @@ export class Game {
     }
 
     this.scoreSys = new ScoreSystem();
+    this.waveBreak = 0;
     this.wave = 0;
     this.crateTimer = 8; // D-10: stale timer carried an instant crate into retries
     this.state = 'playing';
@@ -264,22 +290,21 @@ export class Game {
     } else {
       this.nextWave();
     }
+    this.updateHud();
   }
 
   private nextWave(): void {
-    this.wave += 1;
-    if (this.wave > MAX_WAVE) {
-      this.state = 'victory';
+    if (this.wave > 0) {
+      // A short resupply window keeps the next wave viable while preserving attrition.
+      for (const slot of this.slots) if (slot.alive) {
+        slot.p.ammo += 12;
+        slot.p.hp = Math.min(100, slot.p.hp + 10);
+      }
       this.persistHigh();
-      this.sfx.stopMusic();
-      this.banner.text =
-        `WAVE ${MAX_WAVE} CLEARED (${this.mode === 'coop' ? 'CO-OP' : 'SOLO'})\n` +
-        `SCORE ${this.scoreSys.score} · BEST ${this.high}\n` +
-        `SPACE / tap — run it again · M — menu`;
       this.sfx.preset('pickup');
-      return;
     }
-    const def = WAVE_TABLES[this.wave - 1];
+    this.wave += 1;
+    const def = waveFor(this.wave);
     this.spawnQueue = def.count;
     this.spawnTimer = 0.5;
     this.waveBreak = 0;
@@ -290,6 +315,7 @@ export class Game {
     this.state = 'dead';
     this.persistHigh();
     this.sfx.stopMusic();
+    this.sfx.preset('death');
     this.banner.text =
       `OVERRUN ON WAVE ${this.wave} (${this.room.name})\n` +
       `SCORE ${this.scoreSys.score} · BEST ${this.high}\n` +
@@ -301,7 +327,7 @@ export class Game {
     this.sfx.stopMusic();
     this.banner.text =
       `P${winner + 1} WINS THE DEATHMATCH ${this.slots[winner].kills}–${this.slots[1 - winner].kills}\n` +
-      `(scoring rule is a STUB — TBD ARCADE)\n` +
+      `FIRST TO ${DM_TARGET_KILLS} · ${this.room.name}\n` +
       `SPACE / tap — rematch · M — menu`;
   }
 
@@ -331,15 +357,22 @@ export class Game {
   tick(dt: number): void {
     // touch zones exist only during gameplay — menus/end screens get raw taps
     this.touch.setActive(this.state === 'playing');
+    this.overlay.clear();
+    if (this.state === 'paused' || this.state === 'dead' || this.state === 'victory') {
+      this.overlay.rect(0,0,STAGE_W,STAGE_H).fill({color:0x06090b,alpha:0.76});
+      this.overlay.rect(36,105,568,146).fill(0x172024).stroke({color:0xc4f04d,width:1});
+    }
     this.menuChip.visible = this.state === 'dead' || this.state === 'victory';
     if (this.state === 'playing' && this.input.wasPressed('pause')) {
       this.state = 'paused';
-      this.banner.text = 'PAUSED\nESC / P — resume · M / ENTER — menu';
+      this.banner.text = 'PAUSED\nESC / P / SPACE / tap — resume\nM — menu';
+      this.sfx.stopMusic();
     } else if (this.state === 'paused') {
-      if (this.input.wasPressed('pause')) {
+      if (this.input.wasPressed('pause') || this.input.wasPressed('fire') || this.input.pointer.tapped) {
         this.state = 'playing';
+        this.sfx.startMusic([110, 0, 110, 0, 131, 0, 98, 0], 160);
         this.banner.text = '';
-      } else if (this.input.wasPressed('action') || this.input.pointer.tapped) {
+      } else if (this.input.wasPressed('action')) {
         // Pause remains keyboard- and touch-accessible; tapping the banner quits.
         this.showModeSelect();
       }
@@ -347,20 +380,17 @@ export class Game {
       case 'title':
         if (this.input.wasPressed('fire') || this.input.wasPressed('action') || this.input.pointer.tapped) this.showModeSelect();
         break;
-      case 'mode':
-        if (this.input.wasPressed('slot1') || this.input.wasPressed('fire') || this.input.pointer.tapped) {
-          this.mode = 'solo';
-          this.showRoomSelect();
-        } else if (this.input.wasPressed('slot2')) {
-          this.mode = 'coop';
-          this.showRoomSelect();
-        } else if (this.input.wasPressed('slot3')) {
-          this.mode = 'deathmatch';
-          this.showRoomSelect();
-        }
+      case 'mode': {
+        const tap = this.input.pointer.tapped;
+        const y = this.input.pointer.y;
+        const selection = this.input.wasPressed('slot3') || (tap && y >= 250) ? 2
+          : this.input.wasPressed('slot2') || (tap && y >= 190) ? 1
+          : this.input.wasPressed('slot1') || this.input.wasPressed('fire') || tap ? 0 : -1;
+        if (selection >= 0) { this.mode = (['solo','coop','deathmatch'] as Mode[])[selection]; this.showRoomSelect(); }
         break;
+      }
       case 'room':
-        if (this.input.wasPressed('slot2')) this.startRun(1);
+        if (this.input.wasPressed('slot2') || (this.input.pointer.tapped && this.input.pointer.y >= 210)) this.startRun(1);
         else if (this.input.wasPressed('slot1') || this.input.wasPressed('fire') || this.input.pointer.tapped) this.startRun(0);
         break;
       case 'playing':
@@ -381,8 +411,7 @@ export class Game {
   }
 
   private tickPlaying(dt: number): void {
-    // D-16: cap gameplay time so tab-throttled frames cannot consume invulnerability
-    // in one jump and let stacked movers deliver several hits at once.
+    // Cap motion catch-up; Player independently guards damage with a monotonic clock.
     const gameplayDt = Math.min(dt, 0.05);
     dt = gameplayDt;
     this.updatePlayers(dt);
@@ -391,6 +420,7 @@ export class Game {
       this.updateZombies(dt);
     }
     this.updateBullets(dt);
+    if (this.state !== 'playing') { this.updateHud(); return; }
     this.updateProps(dt);
     this.scoreSys.tick(dt);
     this.updateHud();
@@ -515,21 +545,23 @@ export class Game {
         }
       }
     }
+    const flash = new BlastRing(from, 7, 0xfff0ac);
+    this.blasts.push(flash); this.world.addChild(flash.g);
     this.sfx.preset('shoot');
   }
 
   // --- zombies -------------------------------------------------------------------
   private updateSpawning(dt: number): void {
-    if (this.spawnQueue > 0) {
+    if (this.spawnQueue > 0 && this.zombies.length < 32) {
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
-        const def = WAVE_TABLES[this.wave - 1];
+        const def = waveFor(this.wave);
         const runner = def.runners > 0 && this.spawnQueue <= def.runners;
         this.spawnZombie(runner, def.speed);
         this.spawnQueue -= 1;
         this.spawnTimer = def.spawnEvery;
       }
-    } else if (this.zombies.length === 0) {
+    } else if (this.spawnQueue === 0 && this.zombies.length === 0) {
       this.waveBreak += dt;
       if (this.waveBreak > 2.5) this.nextWave();
     }
@@ -601,6 +633,8 @@ export class Game {
           const z = this.zombies[j];
           if (dist(z.pos, b.pos) < 11) {
             z.hp -= 1;
+            const impact = new BlastRing(z.pos, z.hp <= 0 ? 17 : 8, z.runner ? 0xc76348 : 0x99bd5b);
+            this.blasts.push(impact); this.world.addChild(impact.g);
             dead = true;
             if (z.hp <= 0) {
               this.scoreSys.kill();
@@ -654,9 +688,8 @@ export class Game {
 
   // --- props ---------------------------------------------------------------------
   private updateProps(dt: number): void {
-    // DD-77 / DD-18: spec has no DM pickups; crates are enabled in all modes
-    // as the deadlock fix pending ARCADE ruling on the no-pickup divergence.
-      this.crateTimer -= dt;
+    // All modes supply ammo; the deathmatch spec explicitly includes pickups.
+      if (this.crates.length < 2) this.crateTimer = Math.max(0, this.crateTimer - dt);
       if (this.crateTimer <= 0 && this.crates.length < 2) {
         this.crateTimer = 12;
         const pos = this.freeSpot();
@@ -781,9 +814,9 @@ export class Game {
     }
     const second = this.slots[1];
     this.hudText.text =
-      `WAVE ${this.wave}/${MAX_WAVE}  SCORE ${this.scoreSys.score}  x${this.scoreSys.mult}  ` +
-      `HP ${Math.max(0, this.player.hp)}  AMMO ${this.player.ammo}  [${w.toUpperCase()}]  BEST ${this.high}` +
-      (second ? `\nP2 HP ${Math.max(0, second.p.hp)}  AMMO ${second.p.ammo}` : '') +
-      (this.spawnQueue === 0 && this.zombies.length === 0 ? '  — wave clear…' : '');
+      `WAVE ${this.wave}  SCORE ${this.scoreSys.score}  ×${this.scoreSys.mult}  BEST ${this.high}\n` +
+      `P1 HP ${Math.max(0, this.player.hp)}  AMMO ${this.player.ammo}  ${w.toUpperCase()}` +
+      (second ? `  ·  P2 HP ${Math.max(0, second.p.hp)}  AMMO ${second.p.ammo}` : '') +
+      (this.spawnQueue === 0 && this.zombies.length === 0 ? '  · RESUPPLY +12 AMMO / +10 HP' : '');
   }
 }
