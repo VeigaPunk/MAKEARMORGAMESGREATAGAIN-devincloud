@@ -67,8 +67,9 @@ node MAGA-everything/02-code/armor-games/apps/burger-tycoon/tools/sim.mjs   # bu
 ## Re-verification run — 2026-09-23 (SWE-2 MAX, Devin Cloud)
 
 Continuity-run verdict: the fleet still ships and every recorded gate
-passes. Two real defects repaired; two drifted test suites modernized to
-the sources they cover; one new zero-dep browser gate committed.
+passes. Three real defects repaired (one a live-render regression)
+plus two drifted test suites modernized to the sources they cover;
+two new zero-dep browser gates committed.
 
 | Check | Result |
 |-------|--------|
@@ -87,6 +88,16 @@ Repairs this run:
   slipped past the storage loader and silently unlocked every chapter.
   The sim now clamps the loaded value to `[1, chapters.length]`.
   Shipped pages rebuilt (`tools/ship-build.mjs`).
+- `games/impossible/index.html` — **live-render defect fix.** Commit
+  `1ca27f2`'s post-rebase restore swapped impossible's page scaffold for a
+  variant carrying a literal `<canvas>` placeholder; the game also appends
+  its own stage canvas, so the placeholder stretched full-bleed and pushed
+  the real stage below the fold — the page looked blank-but-beige while the
+  game ran fine underneath. Removed the vestigial element, gave the stage
+  `position: fixed` so `layout()`'s letterbox offsets apply (kept the
+  tabindex/aria-label on `cv`), rebuilt via `ship-build.mjs --only
+  impossible`. Caught while generating covers; re-verified by CDP
+  screenshot + browse gate. Details: `ship-records/impossible-game.md`.
 - `packages/shmup-core/tests/campaign.test.mjs` — **full rewrite.** The
   suite targeted a 2-chapter/`pack.bosses` API the packs had grown past
   (replica is now 10 chapters, cluck 3 sectors). 11 tests: both packs
@@ -102,11 +113,13 @@ Repairs this run:
   dirty asserts real consequence deltas (climate/union backlash, swill
   disease) rather than a deleted `REPUTATION` ending name.
 
-New committed gate: `verification/browse.mjs` — zero-dependency CDP
-browser check reusing `verification/r2/cdp.mjs`. Console/exception/
-network sweep on portal + all 7 games, then real-input smokes
-(Enter/Space/keys/mouse) asserted through each app's read-only `?debug`
-`window.__maga` hooks. Evidence: `verification/evidence/devincloud-20260923/`.
+New committed gates: `verification/browse.mjs` and `covers.mjs` —
+zero-dependency CDP browser checks reusing `verification/r2/cdp.mjs`.
+Console/exception/network sweep on portal + all 7 games, then real-input
+smokes (Enter/Space/keys/mouse) asserted through each app's read-only
+`?debug` `window.__maga` hooks; `covers.mjs` additionally captures real
+gameplay frames (the check that caught the impossible render regression).
+Evidence: `verification/evidence/devincloud-20260923/`.
 
 ### Run identity (this run)
 

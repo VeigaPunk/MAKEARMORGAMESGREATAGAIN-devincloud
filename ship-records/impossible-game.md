@@ -145,6 +145,25 @@ mechanics reference; exactly one rendition is reachable from the hub.
 | Sim-level guarantees (landing never snaps through platforms, practice checkpoints, records) | PASS: `verification/tests/gameplay.test.mjs` (node suite, 31/31) |
 | Console health / self-containment | PASS (sweep + audit) |
 
+## Re-verification addendum — 2026-09-23 (SWE-2 MAX, Devin Cloud)
+
+**Defect found and fixed this run:** the shipped page rendered a dead
+stretched canvas above the real game, which sat below the fold — the title
+screen's bottom sliver ("SELECT TRACK") was all that peeked out. Root cause:
+commit `1ca27f2` (post-rebase restore) swapped the working scaffold for an
+older variant whose `<body>` carries a literal `<canvas>` placeholder; the
+game bundle also appends its own stage canvas, so the placeholder stole the
+grid's center slot and pushed the live canvas off-screen. The console/state
+gates could not see it — the game ran correctly, just out of view — it was
+caught while generating this edition's covers.
+
+Fix: removed the vestigial literal canvas from `apps/impossible/index.html`
+and set `canvas { position: fixed }` (matching boxhead/shmup convention), so
+`layout()`'s letterbox left/top offsets actually apply; `cv` keeps the
+a11y attrs (tabindex/aria-label). Rebuilt via `ship-build.mjs --only
+impossible`; title screen + live gameplay re-verified by CDP screenshot and
+the browse gate (all 7 pages PASS).
+
 ## Verification commands
 
 ```
