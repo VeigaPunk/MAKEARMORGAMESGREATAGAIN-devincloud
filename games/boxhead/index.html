@@ -49766,6 +49766,8 @@ ${e2}`);
   };
   var KEYMAP_P1_SOLO = {
     ...KEYMAP_P1_VERSUS,
+    KeyJ: "fire",
+    KeyK: "action",
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -49793,10 +49795,20 @@ ${e2}`);
       __publicField(this, "overrides", {});
       __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
       __publicField(this, "map2", { ...KEYMAP_P2 });
-      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false, button: -1 });
+      __publicField(this, "held", /* @__PURE__ */ new Set());
+    }
+    reset() {
+      this.held.clear();
+      this.p1.down.clear();
+      this.p1.pressed.clear();
+      this.p2.down.clear();
+      this.p2.pressed.clear();
+      this.pointer.active = this.pointer.tapped = this.pointer.pressed = false;
     }
     /** switch keyboard ownership: solo = P1 gets everything; versus = split */
     setMode(mode) {
+      this.reset();
       this.mode = mode;
       this.rebuild();
     }
@@ -49808,13 +49820,12 @@ ${e2}`);
     /** attach to the canvas (or window) that receives events */
     attach(canvas, toLogical) {
       window.addEventListener("keydown", (e2) => {
-        const t2 = e2.target;
-        const editable = t2 && (t2.tagName === "INPUT" || t2.tagName === "SELECT" || t2.tagName === "TEXTAREA" || t2.isContentEditable);
+        if (e2.target instanceof HTMLElement && (e2.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e2.target.tagName) || e2.target.tagName === "BUTTON" && (e2.code === "Space" || e2.code === "Enter"))) return;
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
         if (a1 === void 0 && a2 === void 0) return;
-        if (editable) return;
         e2.preventDefault();
+        this.held.add(e2.code);
         if (a1 !== void 0) {
           if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
           this.p1.down.add(a1);
@@ -49825,10 +49836,15 @@ ${e2}`);
         }
       });
       window.addEventListener("keyup", (e2) => {
+        this.held.delete(e2.code);
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
-        if (a1) this.p1.down.delete(a1);
-        if (a2) this.p2.down.delete(a2);
+        if (a1 && ![...this.held].some((code) => this.map1[code] === a1)) this.p1.down.delete(a1);
+        if (a2 && ![...this.held].some((code) => this.map2[code] === a2)) this.p2.down.delete(a2);
+      });
+      window.addEventListener("blur", () => this.reset());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.reset();
       });
       const toLocal = (e2) => {
         const r2 = canvas.getBoundingClientRect();
@@ -49838,6 +49854,7 @@ ${e2}`);
       canvas.addEventListener("pointerdown", (e2) => {
         const p2 = toLocal(e2);
         this.pointer.active = true;
+        this.pointer.pressed = true;
         this.pointer.seen = true;
         this.pointer.button = e2.button;
         this.pointer.x = p2.x;
@@ -49854,27 +49871,24 @@ ${e2}`);
         this.pointer.x = p2.x;
         this.pointer.y = p2.y;
       });
-      const release = () => {
+      const release = (e2) => {
         if (!this.pointer.active) return;
+        const p2 = toLocal(e2);
+        this.pointer.x = p2.x;
+        this.pointer.y = p2.y;
         this.pointer.active = false;
         this.pointer.button = -1;
         this.pointer.tapped = true;
       };
       canvas.addEventListener("pointerup", release);
-      canvas.addEventListener("pointercancel", release);
-      window.addEventListener("pointerup", release);
-      window.addEventListener("pointercancel", release);
-      const clearKeys = () => {
-        this.p1.down.clear();
-        this.p2.down.clear();
+      canvas.addEventListener("pointercancel", () => {
         this.pointer.active = false;
-        this.pointer.button = -1;
-      };
-      window.addEventListener("blur", clearKeys);
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) clearKeys();
+        this.pointer.pressed = false;
+        this.pointer.tapped = false;
       });
-      canvas.addEventListener("contextmenu", (e2) => e2.preventDefault());
+      canvas.addEventListener("lostpointercapture", () => {
+        this.pointer.active = false;
+      });
     }
     // --- P1 (backward-compatible API) -------------------------------------------
     isDown(a2) {
@@ -49941,6 +49955,7 @@ ${e2}`);
       this.p1.pressed.clear();
       this.p2.pressed.clear();
       this.pointer.tapped = false;
+      this.pointer.pressed = false;
     }
   };
 
@@ -49971,7 +49986,12 @@ ${e2}`);
   function load(game, key, fallback) {
     try {
       const raw = localStorage.getItem(PREFIX + game + ":" + key);
-      return raw === null ? fallback : JSON.parse(raw);
+      if (raw === null) return fallback;
+      const value = JSON.parse(raw);
+      if (typeof fallback === "number" && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return fallback;
+      if (typeof fallback === "boolean" && typeof value !== "boolean") return fallback;
+      if (typeof fallback === "string" && typeof value !== "string") return fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -49991,13 +50011,22 @@ ${e2}`);
       __publicField(this, "musicGain", null);
       __publicField(this, "sfxGain", null);
       __publicField(this, "noiseBuf", null);
-      __publicField(this, "muted", false);
+      /** persisted mute (merged from origin's parallel improvement) */
+      __publicField(this, "_muted", load("arcade", "muted", false));
       __publicField(this, "_volume", 0.5);
       // --- music: lookahead chip sequencer ----------------------------------------
       __publicField(this, "timer", null);
       __publicField(this, "step", 0);
       __publicField(this, "nextTime", 0);
       __publicField(this, "song", null);
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(v2) {
+      this._muted = v2;
+      save("arcade", "muted", v2);
+      this.applyMaster();
     }
     /** master volume 0..1 — live */
     set volume(v2) {

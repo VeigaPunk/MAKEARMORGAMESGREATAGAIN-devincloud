@@ -57,6 +57,8 @@
   };
   var KEYMAP_P1_SOLO = {
     ...KEYMAP_P1_VERSUS,
+    KeyJ: "fire",
+    KeyK: "action",
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -84,10 +86,20 @@
       __publicField(this, "overrides", {});
       __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
       __publicField(this, "map2", { ...KEYMAP_P2 });
-      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false, button: -1 });
+      __publicField(this, "held", /* @__PURE__ */ new Set());
+    }
+    reset() {
+      this.held.clear();
+      this.p1.down.clear();
+      this.p1.pressed.clear();
+      this.p2.down.clear();
+      this.p2.pressed.clear();
+      this.pointer.active = this.pointer.tapped = this.pointer.pressed = false;
     }
     /** switch keyboard ownership: solo = P1 gets everything; versus = split */
     setMode(mode) {
+      this.reset();
       this.mode = mode;
       this.rebuild();
     }
@@ -99,13 +111,12 @@
     /** attach to the canvas (or window) that receives events */
     attach(canvas, toLogical2) {
       window.addEventListener("keydown", (e) => {
-        const t = e.target;
-        const editable = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+        if (e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.tagName === "BUTTON" && (e.code === "Space" || e.code === "Enter"))) return;
         const a1 = this.map1[e.code];
         const a2 = this.map2[e.code];
         if (a1 === void 0 && a2 === void 0) return;
-        if (editable) return;
         e.preventDefault();
+        this.held.add(e.code);
         if (a1 !== void 0) {
           if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
           this.p1.down.add(a1);
@@ -116,10 +127,15 @@
         }
       });
       window.addEventListener("keyup", (e) => {
+        this.held.delete(e.code);
         const a1 = this.map1[e.code];
         const a2 = this.map2[e.code];
-        if (a1) this.p1.down.delete(a1);
-        if (a2) this.p2.down.delete(a2);
+        if (a1 && ![...this.held].some((code) => this.map1[code] === a1)) this.p1.down.delete(a1);
+        if (a2 && ![...this.held].some((code) => this.map2[code] === a2)) this.p2.down.delete(a2);
+      });
+      window.addEventListener("blur", () => this.reset());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.reset();
       });
       const toLocal = (e) => {
         const r = canvas.getBoundingClientRect();
@@ -129,6 +145,7 @@
       canvas.addEventListener("pointerdown", (e) => {
         const p = toLocal(e);
         this.pointer.active = true;
+        this.pointer.pressed = true;
         this.pointer.seen = true;
         this.pointer.button = e.button;
         this.pointer.x = p.x;
@@ -145,27 +162,24 @@
         this.pointer.x = p.x;
         this.pointer.y = p.y;
       });
-      const release = () => {
+      const release = (e) => {
         if (!this.pointer.active) return;
+        const p = toLocal(e);
+        this.pointer.x = p.x;
+        this.pointer.y = p.y;
         this.pointer.active = false;
         this.pointer.button = -1;
         this.pointer.tapped = true;
       };
       canvas.addEventListener("pointerup", release);
-      canvas.addEventListener("pointercancel", release);
-      window.addEventListener("pointerup", release);
-      window.addEventListener("pointercancel", release);
-      const clearKeys = () => {
-        this.p1.down.clear();
-        this.p2.down.clear();
+      canvas.addEventListener("pointercancel", () => {
         this.pointer.active = false;
-        this.pointer.button = -1;
-      };
-      window.addEventListener("blur", clearKeys);
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) clearKeys();
+        this.pointer.pressed = false;
+        this.pointer.tapped = false;
       });
-      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+      canvas.addEventListener("lostpointercapture", () => {
+        this.pointer.active = false;
+      });
     }
     // --- P1 (backward-compatible API) -------------------------------------------
     isDown(a) {
@@ -232,6 +246,7 @@
       this.p1.pressed.clear();
       this.p2.pressed.clear();
       this.pointer.tapped = false;
+      this.pointer.pressed = false;
     }
   };
 
@@ -262,7 +277,12 @@
   function load(game, key, fallback) {
     try {
       const raw = localStorage.getItem(PREFIX + game + ":" + key);
-      return raw === null ? fallback : JSON.parse(raw);
+      if (raw === null) return fallback;
+      const value = JSON.parse(raw);
+      if (typeof fallback === "number" && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return fallback;
+      if (typeof fallback === "boolean" && typeof value !== "boolean") return fallback;
+      if (typeof fallback === "string" && typeof value !== "string") return fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -282,13 +302,22 @@
       __publicField(this, "musicGain", null);
       __publicField(this, "sfxGain", null);
       __publicField(this, "noiseBuf", null);
-      __publicField(this, "muted", false);
+      /** persisted mute (merged from origin's parallel improvement) */
+      __publicField(this, "_muted", load("arcade", "muted", false));
       __publicField(this, "_volume", 0.5);
       // --- music: lookahead chip sequencer ----------------------------------------
       __publicField(this, "timer", null);
       __publicField(this, "step", 0);
       __publicField(this, "nextTime", 0);
       __publicField(this, "song", null);
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(v) {
+      this._muted = v;
+      save("arcade", "muted", v);
+      this.applyMaster();
     }
     /** master volume 0..1 — live */
     set volume(v) {

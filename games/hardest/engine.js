@@ -27,6 +27,8 @@ const ZONE_CHARS = new Set(['S', 'G', 'K']);
 /* ---------- level parsing ---------- */
 
 function parseLevel(level) {
+  if (level.playerSpeed !== undefined && (!Number.isFinite(level.playerSpeed) || level.playerSpeed <= 0 || level.playerSpeed > 1000))
+    throw new Error('level.playerSpeed: must be greater than 0 and at most 1000 px/s');
   if (!level || typeof level !== 'object') throw new Error('level: not an object');
   const rows = level.map;
   if (!Array.isArray(rows) || rows.length === 0) throw new Error('level.map: empty');

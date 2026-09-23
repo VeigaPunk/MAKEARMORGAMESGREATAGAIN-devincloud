@@ -991,6 +991,8 @@
   };
   var KEYMAP_P1_SOLO = {
     ...KEYMAP_P1_VERSUS,
+    KeyJ: "fire",
+    KeyK: "action",
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -1008,7 +1010,12 @@
   function load(game, key, fallback) {
     try {
       const raw = localStorage.getItem(PREFIX + game + ":" + key);
-      return raw === null ? fallback : JSON.parse(raw);
+      if (raw === null) return fallback;
+      const value = JSON.parse(raw);
+      if (typeof fallback === "number" && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return fallback;
+      if (typeof fallback === "boolean" && typeof value !== "boolean") return fallback;
+      if (typeof fallback === "string" && typeof value !== "string") return fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -1028,13 +1035,22 @@
       __publicField(this, "musicGain", null);
       __publicField(this, "sfxGain", null);
       __publicField(this, "noiseBuf", null);
-      __publicField(this, "muted", false);
+      /** persisted mute (merged from origin's parallel improvement) */
+      __publicField(this, "_muted", load("arcade", "muted", false));
       __publicField(this, "_volume", 0.5);
       // --- music: lookahead chip sequencer ----------------------------------------
       __publicField(this, "timer", null);
       __publicField(this, "step", 0);
       __publicField(this, "nextTime", 0);
       __publicField(this, "song", null);
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(v) {
+      this._muted = v;
+      save("arcade", "muted", v);
+      this.applyMaster();
     }
     /** master volume 0..1 — live */
     set volume(v) {

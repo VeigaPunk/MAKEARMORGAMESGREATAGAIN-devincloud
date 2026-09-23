@@ -5,16 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>CLUCK HORIZON</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #001a1a; height: 100%; overflow: hidden; }
-  canvas { position: fixed; left: 0; top: 0; touch-action: none; image-rendering: pixelated; }
-.mute {
-    position: fixed; top: 26px; right: 8px; z-index: 10;
-    background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
-    font: 11px/1 monospace; padding: 4px 8px; cursor: pointer;
-  }
+  html, body { margin:0; background:#071f20; height:100%; overflow:hidden; color:#e7f0ec; }
+  canvas { position:fixed; left:0; top:0; touch-action:none; image-rendering:pixelated; outline:none; }
+.badge a { color:#a4b7b5; text-decoration:none; font-size:10px; letter-spacing:0; white-space:nowrap; }
+  .badge strong { white-space:nowrap; }
+  .edition { color:#8eaaa4; font-size:10px; white-space:nowrap; }
+  .mute { position:fixed; top:8px; right:8px; z-index:11; min-height:32px; padding:5px 10px;
+    background:#ffffff08; color:#63e6be; border:1px solid #ffffff28; font:10px/1 ui-monospace,monospace; cursor:pointer; }
+  .pause { right:98px; }
+  .mute:hover { background:#ffffff14; }
+  .mute:focus-visible,.badge a:focus-visible { outline:2px solid #63e6be; outline-offset:3px; }
+  @media(max-width:700px) { .edition { display:none; }
+.badge a { font-size:0; } .badge a::before { content:'←'; font-size:16px; } }
 </style>
 </head>
 <body>
+<button id="pause" class="mute pause" type="button" aria-label="Pause or resume game">PAUSE</button>
 <button id="mute" class="mute" type="button">SOUND ON</button>
 <script>
 "use strict";
@@ -44730,6 +44736,8 @@ ${parts.join("\n")}
   };
   var KEYMAP_P1_SOLO = {
     ...KEYMAP_P1_VERSUS,
+    KeyJ: "fire",
+    KeyK: "action",
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -44757,10 +44765,20 @@ ${parts.join("\n")}
       __publicField(this, "overrides", {});
       __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
       __publicField(this, "map2", { ...KEYMAP_P2 });
-      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false, button: -1 });
+      __publicField(this, "held", /* @__PURE__ */ new Set());
+    }
+    reset() {
+      this.held.clear();
+      this.p1.down.clear();
+      this.p1.pressed.clear();
+      this.p2.down.clear();
+      this.p2.pressed.clear();
+      this.pointer.active = this.pointer.tapped = this.pointer.pressed = false;
     }
     /** switch keyboard ownership: solo = P1 gets everything; versus = split */
     setMode(mode) {
+      this.reset();
       this.mode = mode;
       this.rebuild();
     }
@@ -44772,13 +44790,12 @@ ${parts.join("\n")}
     /** attach to the canvas (or window) that receives events */
     attach(canvas, toLogical) {
       window.addEventListener("keydown", (e2) => {
-        const t2 = e2.target;
-        const editable = t2 && (t2.tagName === "INPUT" || t2.tagName === "SELECT" || t2.tagName === "TEXTAREA" || t2.isContentEditable);
+        if (e2.target instanceof HTMLElement && (e2.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e2.target.tagName) || e2.target.tagName === "BUTTON" && (e2.code === "Space" || e2.code === "Enter"))) return;
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
         if (a1 === void 0 && a2 === void 0) return;
-        if (editable) return;
         e2.preventDefault();
+        this.held.add(e2.code);
         if (a1 !== void 0) {
           if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
           this.p1.down.add(a1);
@@ -44789,10 +44806,15 @@ ${parts.join("\n")}
         }
       });
       window.addEventListener("keyup", (e2) => {
+        this.held.delete(e2.code);
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
-        if (a1) this.p1.down.delete(a1);
-        if (a2) this.p2.down.delete(a2);
+        if (a1 && ![...this.held].some((code) => this.map1[code] === a1)) this.p1.down.delete(a1);
+        if (a2 && ![...this.held].some((code) => this.map2[code] === a2)) this.p2.down.delete(a2);
+      });
+      window.addEventListener("blur", () => this.reset());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.reset();
       });
       const toLocal = (e2) => {
         const r2 = canvas.getBoundingClientRect();
@@ -44802,6 +44824,7 @@ ${parts.join("\n")}
       canvas.addEventListener("pointerdown", (e2) => {
         const p2 = toLocal(e2);
         this.pointer.active = true;
+        this.pointer.pressed = true;
         this.pointer.seen = true;
         this.pointer.button = e2.button;
         this.pointer.x = p2.x;
@@ -44818,27 +44841,24 @@ ${parts.join("\n")}
         this.pointer.x = p2.x;
         this.pointer.y = p2.y;
       });
-      const release = () => {
+      const release = (e2) => {
         if (!this.pointer.active) return;
+        const p2 = toLocal(e2);
+        this.pointer.x = p2.x;
+        this.pointer.y = p2.y;
         this.pointer.active = false;
         this.pointer.button = -1;
         this.pointer.tapped = true;
       };
       canvas.addEventListener("pointerup", release);
-      canvas.addEventListener("pointercancel", release);
-      window.addEventListener("pointerup", release);
-      window.addEventListener("pointercancel", release);
-      const clearKeys = () => {
-        this.p1.down.clear();
-        this.p2.down.clear();
+      canvas.addEventListener("pointercancel", () => {
         this.pointer.active = false;
-        this.pointer.button = -1;
-      };
-      window.addEventListener("blur", clearKeys);
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) clearKeys();
+        this.pointer.pressed = false;
+        this.pointer.tapped = false;
       });
-      canvas.addEventListener("contextmenu", (e2) => e2.preventDefault());
+      canvas.addEventListener("lostpointercapture", () => {
+        this.pointer.active = false;
+      });
     }
     // --- P1 (backward-compatible API) -------------------------------------------
     isDown(a2) {
@@ -44905,6 +44925,7 @@ ${parts.join("\n")}
       this.p1.pressed.clear();
       this.p2.pressed.clear();
       this.pointer.tapped = false;
+      this.pointer.pressed = false;
     }
   };
 
@@ -44935,7 +44956,12 @@ ${parts.join("\n")}
   function load(game, key, fallback) {
     try {
       const raw = localStorage.getItem(PREFIX + game + ":" + key);
-      return raw === null ? fallback : JSON.parse(raw);
+      if (raw === null) return fallback;
+      const value = JSON.parse(raw);
+      if (typeof fallback === "number" && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return fallback;
+      if (typeof fallback === "boolean" && typeof value !== "boolean") return fallback;
+      if (typeof fallback === "string" && typeof value !== "string") return fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -44955,13 +44981,22 @@ ${parts.join("\n")}
       __publicField(this, "musicGain", null);
       __publicField(this, "sfxGain", null);
       __publicField(this, "noiseBuf", null);
-      __publicField(this, "muted", false);
+      /** persisted mute (merged from origin's parallel improvement) */
+      __publicField(this, "_muted", load("arcade", "muted", false));
       __publicField(this, "_volume", 0.5);
       // --- music: lookahead chip sequencer ----------------------------------------
       __publicField(this, "timer", null);
       __publicField(this, "step", 0);
       __publicField(this, "nextTime", 0);
       __publicField(this, "song", null);
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(v2) {
+      this._muted = v2;
+      save("arcade", "muted", v2);
+      this.applyMaster();
     }
     /** master volume 0..1 — live */
     set volume(v2) {
@@ -50297,7 +50332,7 @@ ${e2}`);
       };
       const titleText = mk(title, 110, 44, pack.accent, true);
       if (pack.id === "cluck") {
-        Assets.load("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgMjQwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjI0MCI+CiAgPCEtLSBDTFVDSyBIT1JJWk9OIOKAlCBvcmlnaW5hbCBoYW5kLWxldHRlcmVkIHdvcmRtYXJrIChBcnRDbHVjaywgd2F2ZSAyKS4KICAgICAgIFRlYWwgIzIwYzk5NyAvIG9yYW5nZSAjZmZhOTRkIG9uIGRlZXAgc3BhY2UgdGVhbC4gU2xhYi1hcmNhZGUgY2FwcywKICAgICAgIGl0YWxpYyBzbGFudCwgYmVhay13ZWRnZSB0ZXJtaW5hbHMuIE5vdCBkZXJpdmVkIGZyb20gYW55IGV4aXN0aW5nIG1hcmsuIC0tPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ0ZWFsRmlsbCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2M2U2YmUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjU1IiBzdG9wLWNvbG9yPSIjMjBjOTk3Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjYTY3OCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib3JnRmlsbCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmQ4YTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjU1IiBzdG9wLWNvbG9yPSIjZmZhOTRkIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2U4NTkwYyIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPCEtLSBiYWNraW5nIGdsb3cgLS0+CiAgPGcgb3BhY2l0eT0iMC4yNSI+CiAgICA8cmVjdCB4PSIxOCIgeT0iNDIiIHdpZHRoPSI4NjQiIGhlaWdodD0iMTIwIiByeD0iMTgiIGZpbGw9IiMyMGM5OTciLz4KICA8L2c+CiAgPGcgZm9udC1mYW1pbHk9IidBcmlhbCBCbGFjaycsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zdHlsZT0iaXRhbGljIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgIDwhLS0gQ0xVQ0sgLS0+CiAgICA8dGV4dCB4PSIyMzgiIHk9IjEzMiIgZm9udC1zaXplPSIxMDQiIGxldHRlci1zcGFjaW5nPSIyIgogICAgICAgICAgZmlsbD0idXJsKCN0ZWFsRmlsbCkiIHN0cm9rZT0iIzA0MjQxYyIgc3Ryb2tlLXdpZHRoPSI2IgogICAgICAgICAgcGFpbnQtb3JkZXI9InN0cm9rZSIgdHJhbnNmb3JtPSJza2V3WCgtNikiPkNMVUNLPC90ZXh0PgogICAgPCEtLSBIT1JJWk9OIC0tPgogICAgPHRleHQgeD0iNDg2IiB5PSIxMzIiIGZvbnQtc2l6ZT0iMTA0IiBsZXR0ZXItc3BhY2luZz0iMCIKICAgICAgICAgIGZpbGw9InVybCgjb3JnRmlsbCkiIHN0cm9rZT0iIzNhMWMwNSIgc3Ryb2tlLXdpZHRoPSI2IgogICAgICAgICAgcGFpbnQtb3JkZXI9InN0cm9rZSIgdHJhbnNmb3JtPSJza2V3WCgtNikiPkhPUklaT048L3RleHQ+CiAgPC9nPgogIDwhLS0gYmVhayBkaXZpZGVyIGJldHdlZW4gd29yZHMgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDU1IDc4KSI+CiAgICA8cG9seWdvbiBwb2ludHM9IjAsMCAyNiwxNCAwLDI4IDgsMTQiIGZpbGw9IiNmZmUwNjYiIHN0cm9rZT0iIzNhMWMwNSIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPC9nPgogIDwhLS0gd2luZyB1bmRlcmxpbmUgc3dvb3NoIC0tPgogIDxwYXRoIGQ9Ik0xNTAgMTcyIFEgNDUwIDIxMCA3NTAgMTcyIEwgNzQyIDE4OCBRIDQ1MCAyMjQgMTU4IDE4OCBaIgogICAgICAgIGZpbGw9IiMyMGM5OTciIG9wYWNpdHk9IjAuODUiLz4KICA8cGF0aCBkPSJNMjMwIDE3NiBRIDQ1MCAxOTggNjcwIDE3NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZlMDY2IiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gdGhyZWUgZWdnIGRvdHMsIGFyY2FkZSBlbGxpcHNpcyAtLT4KICA8ZyBmaWxsPSIjZmZlOGNjIj4KICAgIDxjaXJjbGUgY3g9IjM5MiIgY3k9IjIwNiIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iNDUwIiBjeT0iMjEwIiByPSI2Ii8+CiAgICA8Y2lyY2xlIGN4PSI1MDgiIGN5PSIyMDYiIHI9IjYiLz4KICA8L2c+Cjwvc3ZnPgo=").then((tex) => {
+        Assets.load("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgMjQwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjI0MCI+CiAgPCEtLSBDTFVDSyBIT1JJWk9OIOKAlCBvcmlnaW5hbCBoYW5kLWxldHRlcmVkIHdvcmRtYXJrIChBcnRDbHVjaywgd2F2ZSAyKS4KICAgICAgIFRlYWwgIzIwYzk5NyAvIG9yYW5nZSAjZmZhOTRkIG9uIGRlZXAgc3BhY2UgdGVhbC4gU2xhYi1hcmNhZGUgY2FwcywKICAgICAgIGl0YWxpYyBzbGFudCwgYmVhay13ZWRnZSB0ZXJtaW5hbHMuIE5vdCBkZXJpdmVkIGZyb20gYW55IGV4aXN0aW5nIG1hcmsuIC0tPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ0ZWFsRmlsbCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM2M2U2YmUiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjU1IiBzdG9wLWNvbG9yPSIjMjBjOTk3Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjYTY3OCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ib3JnRmlsbCIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmZmQ4YTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIwLjU1IiBzdG9wLWNvbG9yPSIjZmZhOTRkIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2U4NTkwYyIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPCEtLSBiYWNraW5nIGdsb3cgLS0+CiAgPGcgb3BhY2l0eT0iMC4yNSI+CiAgICA8cmVjdCB4PSIxOCIgeT0iNDIiIHdpZHRoPSI4NjQiIGhlaWdodD0iMTIwIiByeD0iMTgiIGZpbGw9IiMyMGM5OTciLz4KICA8L2c+CiAgPGcgZm9udC1mYW1pbHk9IidBcmlhbCBCbGFjaycsc2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9IjkwMCIgZm9udC1zdHlsZT0iaXRhbGljIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgIDwhLS0gQ0xVQ0sgLS0+CiAgICA8dGV4dCB4PSIyMjIiIHk9IjEzMiIgZm9udC1zaXplPSI5NiIgdGV4dExlbmd0aD0iMzIwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiIGxldHRlci1zcGFjaW5nPSIyIgogICAgICAgICAgZmlsbD0idXJsKCN0ZWFsRmlsbCkiIHN0cm9rZT0iIzA0MjQxYyIgc3Ryb2tlLXdpZHRoPSI2IgogICAgICAgICAgcGFpbnQtb3JkZXI9InN0cm9rZSIgdHJhbnNmb3JtPSJza2V3WCgtNikiPkNMVUNLPC90ZXh0PgogICAgPCEtLSBIT1JJWk9OIC0tPgogICAgPHRleHQgeD0iNjYwIiB5PSIxMzIiIGZvbnQtc2l6ZT0iOTYiIHRleHRMZW5ndGg9IjQ1MCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nQW5kR2x5cGhzIiBsZXR0ZXItc3BhY2luZz0iMCIKICAgICAgICAgIGZpbGw9InVybCgjb3JnRmlsbCkiIHN0cm9rZT0iIzNhMWMwNSIgc3Ryb2tlLXdpZHRoPSI2IgogICAgICAgICAgcGFpbnQtb3JkZXI9InN0cm9rZSIgdHJhbnNmb3JtPSJza2V3WCgtNikiPkhPUklaT048L3RleHQ+CiAgPC9nPgogIDwhLS0gYmVhayBkaXZpZGVyIGJldHdlZW4gd29yZHMgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMzk5IDk0KSI+CiAgICA8cG9seWdvbiBwb2ludHM9IjAsMCAyNiwxNCAwLDI4IDgsMTQiIGZpbGw9IiNmZmUwNjYiIHN0cm9rZT0iIzNhMWMwNSIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPC9nPgogIDwhLS0gd2luZyB1bmRlcmxpbmUgc3dvb3NoIC0tPgogIDxwYXRoIGQ9Ik0xNTAgMTcyIFEgNDUwIDIxMCA3NTAgMTcyIEwgNzQyIDE4OCBRIDQ1MCAyMjQgMTU4IDE4OCBaIgogICAgICAgIGZpbGw9IiMyMGM5OTciIG9wYWNpdHk9IjAuODUiLz4KICA8cGF0aCBkPSJNMjMwIDE3NiBRIDQ1MCAxOTggNjcwIDE3NiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZlMDY2IiBzdHJva2Utd2lkdGg9IjQiIG9wYWNpdHk9IjAuNyIvPgogIDwhLS0gdGhyZWUgZWdnIGRvdHMsIGFyY2FkZSBlbGxpcHNpcyAtLT4KICA8ZyBmaWxsPSIjZmZlOGNjIj4KICAgIDxjaXJjbGUgY3g9IjM5MiIgY3k9IjIwNiIgcj0iNiIvPgogICAgPGNpcmNsZSBjeD0iNDUwIiBjeT0iMjEwIiByPSI2Ii8+CiAgICA8Y2lyY2xlIGN4PSI1MDgiIGN5PSIyMDYiIHI9IjYiLz4KICA8L2c+Cjwvc3ZnPgo=").then((tex) => {
           const s2 = new Sprite(tex);
           s2.anchor.set(0.5);
           s2.x = STAGE_W / 2;

@@ -5,16 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>GALACTIC CHICKEN: NEXT WAVE</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #0b0018; height: 100%; overflow: hidden; }
-  canvas { position: fixed; left: 0; top: 0; touch-action: none; image-rendering: pixelated; }
-.mute {
-    position: fixed; top: 26px; right: 8px; z-index: 10;
-    background: #1a1a24; color: #f5c542; border: 1px solid #44445c;
-    font: 11px/1 monospace; padding: 4px 8px; cursor: pointer;
-  }
+  html, body { margin:0; background:#151327; height:100%; overflow:hidden; color:#e7f0ec; }
+  canvas { position:fixed; left:0; top:0; touch-action:none; image-rendering:pixelated; outline:none; }
+.badge a { color:#a4b7b5; text-decoration:none; font-size:10px; letter-spacing:0; white-space:nowrap; }
+  .badge strong { white-space:nowrap; }
+  .edition { color:#8eaaa4; font-size:10px; white-space:nowrap; }
+  .mute { position:fixed; top:8px; right:8px; z-index:11; min-height:32px; padding:5px 10px;
+    background:#ffffff08; color:#ffe066; border:1px solid #ffffff28; font:10px/1 ui-monospace,monospace; cursor:pointer; }
+  .pause { right:98px; }
+  .mute:hover { background:#ffffff14; }
+  .mute:focus-visible,.badge a:focus-visible { outline:2px solid #ffe066; outline-offset:3px; }
+  @media(max-width:700px) { .edition { display:none; }
+.badge a { font-size:0; } .badge a::before { content:'←'; font-size:16px; } }
 </style>
 </head>
 <body>
+<button id="pause" class="mute pause" type="button" aria-label="Pause or resume game">PAUSE</button>
 <button id="mute" class="mute" type="button">SOUND ON</button>
 <script>
 "use strict";
@@ -44730,6 +44736,8 @@ ${parts.join("\n")}
   };
   var KEYMAP_P1_SOLO = {
     ...KEYMAP_P1_VERSUS,
+    KeyJ: "fire",
+    KeyK: "action",
     ArrowUp: "up",
     ArrowDown: "down",
     ArrowLeft: "left",
@@ -44757,10 +44765,20 @@ ${parts.join("\n")}
       __publicField(this, "overrides", {});
       __publicField(this, "map1", { ...KEYMAP_P1_SOLO });
       __publicField(this, "map2", { ...KEYMAP_P2 });
-      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, seen: false, button: -1 });
+      __publicField(this, "pointer", { active: false, x: 0, y: 0, tapped: false, pressed: false, seen: false, button: -1 });
+      __publicField(this, "held", /* @__PURE__ */ new Set());
+    }
+    reset() {
+      this.held.clear();
+      this.p1.down.clear();
+      this.p1.pressed.clear();
+      this.p2.down.clear();
+      this.p2.pressed.clear();
+      this.pointer.active = this.pointer.tapped = this.pointer.pressed = false;
     }
     /** switch keyboard ownership: solo = P1 gets everything; versus = split */
     setMode(mode) {
+      this.reset();
       this.mode = mode;
       this.rebuild();
     }
@@ -44772,13 +44790,12 @@ ${parts.join("\n")}
     /** attach to the canvas (or window) that receives events */
     attach(canvas, toLogical) {
       window.addEventListener("keydown", (e2) => {
-        const t2 = e2.target;
-        const editable = t2 && (t2.tagName === "INPUT" || t2.tagName === "SELECT" || t2.tagName === "TEXTAREA" || t2.isContentEditable);
+        if (e2.target instanceof HTMLElement && (e2.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e2.target.tagName) || e2.target.tagName === "BUTTON" && (e2.code === "Space" || e2.code === "Enter"))) return;
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
         if (a1 === void 0 && a2 === void 0) return;
-        if (editable) return;
         e2.preventDefault();
+        this.held.add(e2.code);
         if (a1 !== void 0) {
           if (!this.p1.down.has(a1)) this.p1.pressed.add(a1);
           this.p1.down.add(a1);
@@ -44789,10 +44806,15 @@ ${parts.join("\n")}
         }
       });
       window.addEventListener("keyup", (e2) => {
+        this.held.delete(e2.code);
         const a1 = this.map1[e2.code];
         const a2 = this.map2[e2.code];
-        if (a1) this.p1.down.delete(a1);
-        if (a2) this.p2.down.delete(a2);
+        if (a1 && ![...this.held].some((code) => this.map1[code] === a1)) this.p1.down.delete(a1);
+        if (a2 && ![...this.held].some((code) => this.map2[code] === a2)) this.p2.down.delete(a2);
+      });
+      window.addEventListener("blur", () => this.reset());
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.reset();
       });
       const toLocal = (e2) => {
         const r2 = canvas.getBoundingClientRect();
@@ -44802,6 +44824,7 @@ ${parts.join("\n")}
       canvas.addEventListener("pointerdown", (e2) => {
         const p2 = toLocal(e2);
         this.pointer.active = true;
+        this.pointer.pressed = true;
         this.pointer.seen = true;
         this.pointer.button = e2.button;
         this.pointer.x = p2.x;
@@ -44818,27 +44841,24 @@ ${parts.join("\n")}
         this.pointer.x = p2.x;
         this.pointer.y = p2.y;
       });
-      const release = () => {
+      const release = (e2) => {
         if (!this.pointer.active) return;
+        const p2 = toLocal(e2);
+        this.pointer.x = p2.x;
+        this.pointer.y = p2.y;
         this.pointer.active = false;
         this.pointer.button = -1;
         this.pointer.tapped = true;
       };
       canvas.addEventListener("pointerup", release);
-      canvas.addEventListener("pointercancel", release);
-      window.addEventListener("pointerup", release);
-      window.addEventListener("pointercancel", release);
-      const clearKeys = () => {
-        this.p1.down.clear();
-        this.p2.down.clear();
+      canvas.addEventListener("pointercancel", () => {
         this.pointer.active = false;
-        this.pointer.button = -1;
-      };
-      window.addEventListener("blur", clearKeys);
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) clearKeys();
+        this.pointer.pressed = false;
+        this.pointer.tapped = false;
       });
-      canvas.addEventListener("contextmenu", (e2) => e2.preventDefault());
+      canvas.addEventListener("lostpointercapture", () => {
+        this.pointer.active = false;
+      });
     }
     // --- P1 (backward-compatible API) -------------------------------------------
     isDown(a2) {
@@ -44905,6 +44925,7 @@ ${parts.join("\n")}
       this.p1.pressed.clear();
       this.p2.pressed.clear();
       this.pointer.tapped = false;
+      this.pointer.pressed = false;
     }
   };
 
@@ -44935,7 +44956,12 @@ ${parts.join("\n")}
   function load(game, key, fallback) {
     try {
       const raw = localStorage.getItem(PREFIX + game + ":" + key);
-      return raw === null ? fallback : JSON.parse(raw);
+      if (raw === null) return fallback;
+      const value = JSON.parse(raw);
+      if (typeof fallback === "number" && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return fallback;
+      if (typeof fallback === "boolean" && typeof value !== "boolean") return fallback;
+      if (typeof fallback === "string" && typeof value !== "string") return fallback;
+      return value;
     } catch {
       return fallback;
     }
@@ -44955,13 +44981,22 @@ ${parts.join("\n")}
       __publicField(this, "musicGain", null);
       __publicField(this, "sfxGain", null);
       __publicField(this, "noiseBuf", null);
-      __publicField(this, "muted", false);
+      /** persisted mute (merged from origin's parallel improvement) */
+      __publicField(this, "_muted", load("arcade", "muted", false));
       __publicField(this, "_volume", 0.5);
       // --- music: lookahead chip sequencer ----------------------------------------
       __publicField(this, "timer", null);
       __publicField(this, "step", 0);
       __publicField(this, "nextTime", 0);
       __publicField(this, "song", null);
+    }
+    get muted() {
+      return this._muted;
+    }
+    set muted(v2) {
+      this._muted = v2;
+      save("arcade", "muted", v2);
+      this.applyMaster();
     }
     /** master volume 0..1 — live */
     set volume(v2) {
