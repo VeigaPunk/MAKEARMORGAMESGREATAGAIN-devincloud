@@ -1,0 +1,11 @@
+[
+  "boot mode=create {\"glHp\":null,\"enHp\":\"34 HP\",\"status\":\"BOUT 1 OF 12\",\"name\":\"\",\"buttons\":8}",
+  "create: stats allocated → {\"strength\":5,\"agility\":3,\"vitality\":4,\"defense\":2}",
+  "hub reached: mode=hub {\"glHp\":null,\"enHp\":\"34 HP\",\"status\":\"BOUT 1 OF 12\",\"name\":null,\"buttons\":3}",
+  "shop: nothing affordable yet (fresh save) — inspected only",
+  "bout 1 started: mode=arena",
+  "round 4: gl=null en=7 / 34 [ROUND 5 · NORMAL STRIKE]",
+  "round 5: gl=null en=48 HP [BOUT 2 OF 12]",
+  "bout resolved: mode=hub {\"glHp\":null,\"enHp\":\"48 HP\",\"status\":\"BOUT 2 OF 12\",\"name\":null,\"buttons\":3}",
+  "after reload: mode=hub {\"glHp\":null,\"enHp\":\"48 HP\",\"status\":\"BOUT 2 OF 12\",\"name\":null,\"buttons\":3}"
+]

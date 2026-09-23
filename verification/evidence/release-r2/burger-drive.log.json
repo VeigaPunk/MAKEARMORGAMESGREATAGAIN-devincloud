@@ -1,0 +1,15 @@
+[
+  "started via \"Continue company\" → {\"over\":false,\"reason\":\"\",\"cash\":502,\"cattle\":9.686110000000209,\"crops\":20.313889999999788,\"demand\":1,\"backlash\":0,\"dirty\":{\"deforest\":0,\"cheapFeed\":0,\"cutCorners\":0},\"day\":0}",
+  "pane1 \"sow\": unavailable/disabled (affordability rules)",
+  "pane1 \"harvest\": unavailable/disabled (affordability rules)",
+  "pane2 \"buy\": unavailable/disabled (affordability rules)",
+  "pane2 \"Use cheap feed1.8x patties, disease risk\" → {\"over\":false,\"reason\":\"\",\"cash\":503,\"cattle\":9.479059000000197,\"crops\":20.268868999999782,\"demand\":1,\"backlash\":0,\"dirty\":{\"deforest\":0,\"cheapFeed\":1,\"cutCorners\":0},\"day\":0}",
+  "pane3 \"market\": unavailable/disabled (affordability rules)",
+  "pane4 \"lobby\": unavailable/disabled (affordability rules)",
+  "pane keys 2/3/4/1 tapped",
+  "dirty feedlot \"Use cheap feed1.8x patties, disease risk\" → {\"over\":false,\"reason\":\"\",\"cash\":503,\"cattle\":9.275995000000183,\"crops\":20.248804999999788,\"demand\":1,\"backlash\":0,\"dirty\":{\"deforest\":0,\"cheapFeed\":0,\"cutCorners\":0},\"day\":0}",
+  "hq pr \"PR spin-15 backlash, -$100\" engaged",
+  "pause/resume via header button → {\"over\":false,\"reason\":\"\",\"cash\":405,\"cattle\":9.080995000000152,\"crops\":20.443804999999777,\"demand\":1,\"backlash\":0,\"dirty\":{\"deforest\":0,\"cheapFeed\":0,\"cutCorners\":0},\"day\":0}",
+  "mute toggled (\"Sound off\")",
+  "after reload: {\"paused\":true,\"sim\":{\"cash\":405,\"over\":false}} (was cash=405) — run must resume, not restart"
+]

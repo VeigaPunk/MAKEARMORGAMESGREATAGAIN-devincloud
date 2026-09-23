@@ -1,0 +1,20 @@
+[
+  "boxhead: \"Boxhead — MAGA native replica\" — no errors",
+  "impossible: \"The Impossible Game\" — no errors",
+  "burger-tycoon: \"Burger Tycoon\" — no errors",
+  "chicken-invaders: \"Chicken Invaders — MAGA native replica\" — no errors",
+  "chicken-invaders-original: \"Cluck Horizon — MAGA original\" — no errors",
+  "swords-and-sandals: \"Swords & Sandals — The arena awaits\" — no errors",
+  "hardest: \"The World's Hardest Game\" — no errors",
+  "hub cards: [\"./boxhead/\",\"./impossible/\",\"./burger-tycoon/\",\"./chicken-invaders/\",\"./swords-and-sandals/\",\"./chicken-invaders-original/\",\"./hardest/\"]",
+  "  ./boxhead/ → return-link=true",
+  "  ./impossible/ → return-link=true",
+  "  ./burger-tycoon/ → return-link=true",
+  "  ./chicken-invaders/ → return-link=true",
+  "  ./swords-and-sandals/ → return-link=true",
+  "  ./chicken-invaders-original/ → return-link=true",
+  "  ./hardest/ → return-link=true",
+  "mobile 390x844 burger: tabs display=\"flex\" (grid => touch layout active)",
+  "boxhead after key start: {\"s\":\"playing\",\"stick\":null,\"coarse\":false}",
+  "touch stick: during={\"s\":\"playing\",\"stick\":{\"x\":0.9786930370068305,\"y\":0},\"coarse\":true} after-release={\"s\":\"playing\",\"stick\":null,\"coarse\":true}"
+]

@@ -1,0 +1,12 @@
+[
+  "muted via DOM button",
+  "solo run started: {\"state\":\"playing\",\"mode\":\"solo\",\"wave\":1,\"zombies\":0,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":24},\"slots\":1,\"score\":null,\"hud\":\"WAVE 1  SCORE 0  ×1  BEST 300\"}",
+  "wave 1: zombies=0 hp=100 ammo=24",
+  "wave 2: zombies=0 hp=100 ammo=11",
+  "solo ended: {\"state\":\"dead\",\"mode\":\"solo\",\"wave\":2,\"zombies\":6,\"p\":{\"x\":574,\"y\":255,\"hp\":0,\"ammo\":0},\"slots\":1,\"score\":null,\"hud\":\"WAVE 2  SCORE 3300  ×1  BEST 1500\"}",
+  "after settle: {\"state\":\"dead\",\"mode\":\"solo\",\"wave\":2,\"zombies\":6,\"p\":{\"x\":574,\"y\":255,\"hp\":0,\"ammo\":0},\"slots\":1,\"score\":null,\"hud\":\"WAVE 2  SCORE 3300  ×1  BEST 1500\"}",
+  "after retry: {\"state\":\"playing\",\"mode\":\"solo\",\"wave\":1,\"zombies\":1,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":24},\"slots\":1,\"score\":null,\"hud\":\"WAVE 1  SCORE 0  ×1  BEST 3300\"}",
+  "pause → {\"state\":\"paused\",\"mode\":\"solo\",\"wave\":1,\"zombies\":1,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":24},\"slots\":1,\"score\":null,\"hud\":\"WAVE 1  SCORE 0  ×1  BEST 3300\"} → resume {\"state\":\"playing\",\"mode\":\"solo\",\"wave\":1,\"zombies\":1,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":24},\"slots\":1,\"score\":null,\"hud\":\"WAVE 1  SCORE 0  ×1  BEST 3300\"}",
+  "deathmatch: {\"state\":\"playing\",\"mode\":\"deathmatch\",\"wave\":0,\"zombies\":0,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":24},\"slots\":2,\"score\":null,\"hud\":\"DEATHMATCH — P1 0 · P2 0  (target 5)\"}",
+  "dm after fire: {\"state\":\"playing\",\"mode\":\"deathmatch\",\"wave\":0,\"zombies\":0,\"p\":{\"x\":320,\"y\":200,\"hp\":100,\"ammo\":22},\"slots\":2,\"score\":null,\"hud\":\"DEATHMATCH — P1 0 · P2 0  (target 5)\"}"
+]

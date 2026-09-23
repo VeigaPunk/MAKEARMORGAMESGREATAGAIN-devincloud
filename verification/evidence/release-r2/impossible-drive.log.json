@@ -1,0 +1,13 @@
+[
+  "muted via button \"Sound on\"",
+  "title screen: [\"title\",\"running\",0,0,1]",
+  "course 1 CLEARED: deaths=0 attempts=1 jumps=17 in 27.2s",
+  "course 2 started for death test: [\"play\",\"running\",117,0,1]",
+  "died without jumping: [\"play\",\"dead\",1410,1,1]",
+  "after respawn window: [\"play\",\"running\",375,1,2] (attempt must be 2, running)",
+  "paused: [\"pause\",\"running\",414,1,2]",
+  "course 2 CLEARED: deaths=0 attempts=1 jumps=19 in 34.7s",
+  "paused: [\"clear\",\"clear\",12600,0,1]",
+  "course 3 CLEARED: deaths=0 attempts=1 jumps=24 in 40.5s",
+  "console errors during session: n/a"
+]
